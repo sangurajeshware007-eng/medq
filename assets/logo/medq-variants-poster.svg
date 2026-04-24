@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1200" role="img" aria-label="MedQ+ — Four brand concept variants">
+  <title>MedQ+ — Connecting Health Care to Every Corner of India</title>
+
+  <defs>
+    <!-- Shared palette -->
+    <radialGradient id="globe" cx="36%" cy="30%" r="78%">
+      <stop offset="0%"  stop-color="#E6F4FA"/>
+      <stop offset="55%" stop-color="#5BB8E8"/>
+      <stop offset="100%" stop-color="#0A72A0"/>
+    </radialGradient>
+    <radialGradient id="ground" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#000" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- India silhouette — scaled/positioned by callers. Hand-traced approximation. -->
+    <symbol id="india" viewBox="0 0 220 280" preserveAspectRatio="xMidYMid meet">
+      <path
+        d="M 60 10
+           L 130 12 L 165 22 L 200 42
+           C 212 60 212 84 200 108
+           L 195 140 L 183 170 L 165 200 L 142 240 L 120 265 L 108 258
+           L 95 230 L 80 200 L 70 170 L 60 145 L 48 122 L 30 108 L 12 120
+           L 5 98 L 20 75 L 32 50 L 42 28 Z"
+        fill="#148F6C" stroke="#0C6A50" stroke-width="1.6" stroke-linejoin="round"/>
+      <!-- Sri Lanka -->
+      <ellipse cx="122" cy="275" rx="6" ry="8" fill="#148F6C" stroke="#0C6A50" stroke-width="1.2"/>
+    </symbol>
+
+    <!-- Compass arrow group (red) — centre-relative to (0,0), pointing up. Callers rotate 0/90/180/270. -->
+    <symbol id="compass-arrow" overflow="visible">
+      <line x1="0" y1="-24" x2="0" y2="-64" stroke="#D13B2A" stroke-width="5" stroke-linecap="round"/>
+      <polygon points="0,-78 -11,-56 11,-56" fill="#D13B2A"/>
+    </symbol>
+
+    <!-- Heart with ECG line — clean medical symbol. -->
+    <symbol id="heart-ecg" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid meet">
+      <!-- Heart shape -->
+      <path d="M 60 106
+               C 60 106 8 78 8 42
+               C 8 22 24 8 40 8
+               C 50 8 58 14 60 22
+               C 62 14 70 8 80 8
+               C 96 8 112 22 112 42
+               C 112 78 60 106 60 106 Z"
+            fill="#E0242C" stroke="#8F121A" stroke-width="2"/>
+      <!-- ECG line (white) -->
+      <polyline points="18,58 40,58 48,42 56,78 64,38 72,58 94,58"
+                fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- Stethoscope — tube Y + two earbuds + diaphragm. -->
+    <symbol id="stethoscope" viewBox="0 0 200 220" preserveAspectRatio="xMidYMid meet">
+      <!-- Left earbud -->
+      <circle cx="40" cy="20" r="12" fill="#0A5870"/>
+      <!-- Right earbud -->
+      <circle cx="160" cy="20" r="12" fill="#0A5870"/>
+      <!-- Tubes from earbuds meeting at Y junction -->
+      <path d="M 40 28 C 50 90 90 110 100 120
+               M 160 28 C 150 90 110 110 100 120"
+            fill="none" stroke="#0A5870" stroke-width="6" stroke-linecap="round"/>
+      <!-- Long tube down -->
+      <path d="M 100 120 C 100 160 140 170 148 180"
+            fill="none" stroke="#0A5870" stroke-width="6" stroke-linecap="round"/>
+      <!-- Diaphragm / chestpiece -->
+      <circle cx="155" cy="190" r="22" fill="#0A5870"/>
+      <circle cx="155" cy="190" r="14" fill="#4FB0C9" stroke="#0A5870" stroke-width="1.5"/>
+    </symbol>
+
+    <!-- Reusable compass + tagline frame (for each variant tile) -->
+    <symbol id="frame" viewBox="0 0 500 600" overflow="visible">
+      <!-- Compass labels -->
+      <g font-family="Georgia, 'Times New Roman', serif" font-weight="700" fill="#B83A2B" font-size="30">
+        <text x="250" y="40" text-anchor="middle">N</text>
+        <text x="250" y="540" text-anchor="middle">S</text>
+        <text x="470" y="310">E</text>
+        <text x="15"  y="310">W</text>
+      </g>
+      <!-- 4 red arrows -->
+      <use href="#compass-arrow" transform="translate(250 110)"/>
+      <use href="#compass-arrow" transform="translate(250 490) rotate(180)"/>
+      <use href="#compass-arrow" transform="translate(435 300) rotate(90)"/>
+      <use href="#compass-arrow" transform="translate(65  300) rotate(-90)"/>
+      <!-- Tagline -->
+      <g font-family="Georgia, 'Times New Roman', serif" fill="#0A5870">
+        <text x="250" y="560" font-size="28" font-weight="700" text-anchor="middle">Connecting Health Care</text>
+        <text x="250" y="588" font-size="17" font-style="italic" text-anchor="middle">— to Every Corner of India —</text>
+      </g>
+    </symbol>
+  </defs>
+
+  <!-- ═════ White backdrop ═════ -->
+  <rect width="1000" height="1200" fill="#FFFFFF"/>
+
+  <!-- ═════ V1 (top-left): Globe + India + dashed orbit arcs ═════ -->
+  <g transform="translate(0 0)">
+    <use href="#frame"/>
+    <!-- Dashed orbit arcs hugging the globe between cardinals -->
+    <g fill="none" stroke="#0A6F8A" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="9 9">
+      <path d="M 120 225 A 170 170 0 0 1 250 120"/>
+      <path d="M 250 120 A 170 170 0 0 1 380 225"/>
+      <path d="M 380 375 A 170 170 0 0 1 250 480"/>
+      <path d="M 250 480 A 170 170 0 0 1 120 375"/>
+    </g>
+    <ellipse cx="250" cy="470" rx="130" ry="16" fill="url(#ground)"/>
+    <!-- Globe sphere -->
+    <circle cx="250" cy="300" r="158" fill="url(#globe)" stroke="#0A6F8A" stroke-width="1.5"/>
+    <!-- Meridian + equator + tropics -->
+    <ellipse cx="250" cy="300" rx="46" ry="158" fill="none" stroke="#0A6F8A" stroke-width="1" opacity="0.55"/>
+    <ellipse cx="250" cy="300" rx="158" ry="40" fill="none" stroke="#0A6F8A" stroke-width="1" opacity="0.55"/>
+    <ellipse cx="250" cy="250" rx="148" ry="28" fill="none" stroke="#0A6F8A" stroke-width="0.8" opacity="0.35"/>
+    <ellipse cx="250" cy="350" rx="148" ry="28" fill="none" stroke="#0A6F8A" stroke-width="0.8" opacity="0.35"/>
+    <!-- India over the globe -->
+    <use href="#india" x="180" y="170" width="150" height="190"/>
+  </g>
+
+  <!-- ═════ V2 (top-right): Globe + India + orbital ribbons ═════ -->
+  <g transform="translate(500 0)">
+    <use href="#frame"/>
+    <ellipse cx="250" cy="470" rx="130" ry="16" fill="url(#ground)"/>
+    <!-- Globe -->
+    <circle cx="250" cy="300" r="158" fill="url(#globe)" stroke="#0A6F8A" stroke-width="1.5"/>
+    <ellipse cx="250" cy="300" rx="46" ry="158" fill="none" stroke="#0A6F8A" stroke-width="1" opacity="0.55"/>
+    <ellipse cx="250" cy="300" rx="158" ry="40" fill="none" stroke="#0A6F8A" stroke-width="1" opacity="0.55"/>
+    <use href="#india" x="180" y="170" width="150" height="190"/>
+    <!-- Orbital ribbons (gradient-style with two stroked paths for depth) -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M 60 260 Q 250 150 445 300 Q 440 310 435 320 Q 250 180 65 280 Z"
+            fill="#0A6F8A" opacity="0.88"/>
+      <path d="M 80 340 Q 260 470 440 360 Q 445 370 450 380 Q 260 490 80 350 Z"
+            fill="#148F6C" opacity="0.72"/>
+      <path d="M 100 220 Q 260 110 410 210"
+            stroke="#5BB8E8" stroke-width="4"/>
+    </g>
+  </g>
+
+  <!-- ═════ V3 (bottom-left): Globe (dimmed) + Heart/ECG overlay ═════ -->
+  <g transform="translate(0 600)">
+    <use href="#frame"/>
+    <ellipse cx="250" cy="470" rx="130" ry="16" fill="url(#ground)"/>
+    <circle cx="250" cy="300" r="158" fill="url(#globe)" stroke="#0A6F8A" stroke-width="1.5" opacity="0.9"/>
+    <ellipse cx="250" cy="300" rx="46" ry="158" fill="none" stroke="#0A6F8A" stroke-width="1" opacity="0.4"/>
+    <ellipse cx="250" cy="300" rx="158" ry="40" fill="none" stroke="#0A6F8A" stroke-width="1" opacity="0.4"/>
+    <!-- Heart + ECG centered on globe -->
+    <use href="#heart-ecg" x="175" y="225" width="150" height="150"/>
+  </g>
+
+  <!-- ═════ V4 (bottom-right): Compass ring + India + Stethoscope ═════ -->
+  <g transform="translate(500 600)">
+    <use href="#frame"/>
+    <!-- Outer compass ring -->
+    <circle cx="250" cy="300" r="165" fill="none" stroke="#0A6F8A" stroke-width="3" stroke-dasharray="4 7"/>
+    <circle cx="250" cy="300" r="145" fill="none" stroke="#0A6F8A" stroke-width="2"/>
+    <!-- 4 small station dots at NE, NW, SE, SW -->
+    <g fill="#148F6C">
+      <circle cx="145" cy="185" r="5"/>
+      <circle cx="355" cy="185" r="5"/>
+      <circle cx="145" cy="415" r="5"/>
+      <circle cx="355" cy="415" r="5"/>
+    </g>
+    <!-- India inside the ring -->
+    <use href="#india" x="180" y="185" width="150" height="190"/>
+    <!-- Stethoscope draped around bottom-right of ring -->
+    <use href="#stethoscope" x="320" y="320" width="170" height="190"/>
+  </g>
+</svg>

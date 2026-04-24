@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "MedReachPlus",
+    "slug": "medreachplus",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "medreachplus",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.medreachplus"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0052CC"
+      },
+      "package": "com.medreachplus",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location"
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MedQ+">
+  <title>MedQ+</title>
+  <!-- Mono version — single fill, inverse of the plus. Use on dark backgrounds. -->
+  <path fill-rule="evenodd" clip-rule="evenodd"
+        d="M32 6C17.641 6 6 17.641 6 32s11.641 26 26 26 26-11.641 26-26S46.359 6 32 6Zm3.5 9v13.5H49v7H35.5V49h-7V35.5H15v-7h13.5V15h7Z"
+        fill="#FFFFFF"/>
+  <!-- Q tail -->
+  <path d="M 50 48 Q 58 52 60 60" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+</svg>
