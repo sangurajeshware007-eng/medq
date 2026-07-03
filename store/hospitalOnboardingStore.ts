@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+
 import storage from '../utils/storage';
 export type UploadStatus = 'idle' | 'uploading' | 'done' | 'error';
 
@@ -11,8 +12,8 @@ export interface DocumentUpload {
   required: boolean;
   // Set after successful R2 upload
   uploadStatus: UploadStatus;
-  uploadedUrl?: string;   // public URL — only used by public docs
-  uploadedKey?: string;   // object key — for REGISTRATION_CERTIFICATE, ACCREDITATION
+  uploadedUrl?: string; // public URL — only used by public docs
+  uploadedKey?: string; // object key — for REGISTRATION_CERTIFICATE, ACCREDITATION
 }
 
 /**
@@ -22,15 +23,15 @@ export interface DocumentUpload {
  * UI can enforce the max in one place.
  */
 export interface FacilityPhoto {
-  id: string;              // client-side uuid; only for React list keys
-  uri: string;             // local URI for preview
+  id: string; // client-side uuid; only for React list keys
+  uri: string; // local URI for preview
   fileName: string;
   mimeType?: string;
   uploadStatus: UploadStatus;
-  uploadedUrl?: string;    // public URL after successful R2 upload
+  uploadedUrl?: string; // public URL after successful R2 upload
 }
 
-export const MAX_FACILITY_PHOTOS = 4;
+export const MAX_FACILITY_PHOTOS = 5;
 /**
  * Structured address — matches the backend AddressDto shape 1:1.
  * Pincode-led entry: user enters pincode first, city/state auto-fill from
@@ -38,13 +39,13 @@ export const MAX_FACILITY_PHOTOS = 4;
  * isn't in the master table).
  */
 export interface HospitalAddressStep {
-  addressLine1: string;  // "15 MG Road, Near Bus Stand"
-  addressLine2: string;  // "Basavakalyan Nagar" (optional)
-  pincode: string;       // 6 digits
+  addressLine1: string; // "15 MG Road, Near Bus Stand"
+  addressLine2: string; // "Basavakalyan Nagar" (optional)
+  pincode: string; // 6 digits
   city: string;
-  district: string;      // optional; often auto-filled from lookup
+  district: string; // optional; often auto-filled from lookup
   state: string;
-  country: string;       // defaults to "India"
+  country: string; // defaults to "India"
 }
 
 export interface HospitalProfileStep {
@@ -61,7 +62,7 @@ export interface HospitalProfileStep {
   totalBeds: string;
   is24x7: boolean;
   website: string;
-  imageUrl: string;       // public URL of hospital profile photo (set after R2 upload)
+  imageUrl: string; // public URL of hospital profile photo (set after R2 upload)
 }
 export interface HospitalDocumentsStep {
   registrationNumber: string;
@@ -87,13 +88,28 @@ interface HospitalOnboardingState {
   resetStore: () => void;
 }
 const defaultAddress: HospitalAddressStep = {
-  addressLine1: '', addressLine2: '', pincode: '',
-  city: '', district: '', state: '', country: 'India',
+  addressLine1: '',
+  addressLine2: '',
+  pincode: '',
+  city: '',
+  district: '',
+  state: '',
+  country: 'India',
 };
 const defaultProfile: HospitalProfileStep = {
-  name: '', address: { ...defaultAddress }, locationLat: '', locationLng: '',
-  phone: '', emergencyContact: '', departments: [], customDepartments: [],
-  establishedYear: '', totalBeds: '', is24x7: false, website: '', imageUrl: '',
+  name: '',
+  address: { ...defaultAddress },
+  locationLat: '',
+  locationLng: '',
+  phone: '',
+  emergencyContact: '',
+  departments: [],
+  customDepartments: [],
+  establishedYear: '',
+  totalBeds: '',
+  is24x7: false,
+  website: '',
+  imageUrl: '',
 };
 // LOGO and FACILITY_PHOTOS are intentionally NOT here:
 //  - LOGO lives on profile.imageUrl (uploaded in step 1, saved to hospitals.image_url)
@@ -113,16 +129,23 @@ export const useHospitalOnboardingStore = create<HospitalOnboardingState>()(
       currentStep: 1,
       completedSteps: [],
       profile: { ...defaultProfile },
-      documents: { registrationNumber: '', documents: defaultDocs.map((d) => ({ ...d })), facilityPhotos: [] },
+      documents: {
+        registrationNumber: '',
+        documents: defaultDocs.map((d) => ({ ...d })),
+        facilityPhotos: [],
+      },
       setCurrentStep: (step) => set({ currentStep: step }),
       markStepCompleted: (step) =>
         set((s) => ({
-          completedSteps: s.completedSteps.includes(step) ? s.completedSteps : [...s.completedSteps, step],
+          completedSteps: s.completedSteps.includes(step)
+            ? s.completedSteps
+            : [...s.completedSteps, step],
         })),
       updateProfile: (data) => set((s) => ({ profile: { ...s.profile, ...data } })),
-      updateAddress: (data) => set((s) => ({
-        profile: { ...s.profile, address: { ...s.profile.address, ...data } },
-      })),
+      updateAddress: (data) =>
+        set((s) => ({
+          profile: { ...s.profile, address: { ...s.profile.address, ...data } },
+        })),
       updateDocuments: (data) => set((s) => ({ documents: { ...s.documents, ...data } })),
       setDocument: (type, doc) =>
         set((s) => ({
@@ -159,9 +182,14 @@ export const useHospitalOnboardingStore = create<HospitalOnboardingState>()(
         })),
       resetStore: () =>
         set({
-          currentStep: 1, completedSteps: [],
+          currentStep: 1,
+          completedSteps: [],
           profile: { ...defaultProfile },
-          documents: { registrationNumber: '', documents: defaultDocs.map((d) => ({ ...d })), facilityPhotos: [] },
+          documents: {
+            registrationNumber: '',
+            documents: defaultDocs.map((d) => ({ ...d })),
+            facilityPhotos: [],
+          },
         }),
     }),
     {
@@ -171,7 +199,8 @@ export const useHospitalOnboardingStore = create<HospitalOnboardingState>()(
       // shapes in place so half-filled drafts survive app updates.
       version: 3,
       migrate: (persisted: unknown, fromVersion) => {
-        if (!persisted || typeof persisted !== 'object') return persisted as HospitalOnboardingState;
+        if (!persisted || typeof persisted !== 'object')
+          return persisted as HospitalOnboardingState;
         const s = persisted as {
           profile?: { address?: unknown };
           documents?: { documents?: Array<{ type: string }>; facilityPhotos?: unknown };
@@ -179,7 +208,11 @@ export const useHospitalOnboardingStore = create<HospitalOnboardingState>()(
 
         // v<2 → v2: profile.address was a flat string, now an object.
         if (fromVersion < 2 && s.profile) {
-          if (typeof s.profile.address === 'string' || s.profile.address == null) {
+          if (
+            typeof s.profile.address === 'string' ||
+            s.profile.address === null ||
+            s.profile.address === undefined
+          ) {
             s.profile.address = { ...defaultAddress };
           }
         }

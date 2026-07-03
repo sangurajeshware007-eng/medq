@@ -4,7 +4,6 @@
  *
  * Usage: call in the onboarding _layout.tsx before rendering steps.
  */
-import { useState, useEffect, useCallback } from 'react';
 import onboardingService from '@services/onboardingService';
 import type {
   OnboardingStatus,
@@ -13,13 +12,19 @@ import type {
 } from '@services/onboardingService';
 import { useDoctorOnboardingStore } from '@store/doctorOnboardingStore';
 import { useHospitalOnboardingStore } from '@store/hospitalOnboardingStore';
+import { useState, useEffect, useCallback } from 'react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 /** Map backend dayOfWeek (1=Monday … 7=Sunday) to our day codes */
 const DAY_OF_WEEK_MAP: Record<number, string> = {
-  1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU',
-  5: 'FRI', 6: 'SAT', 7: 'SUN',
+  1: 'MON',
+  2: 'TUE',
+  3: 'WED',
+  4: 'THU',
+  5: 'FRI',
+  6: 'SAT',
+  7: 'SUN',
 };
 
 /** Map backend approvalStatus → our OnboardingStatus */
@@ -32,9 +37,7 @@ function toOnboardingStatus(approvalStatus: string): OnboardingStatus {
  * Group flat availability rows (one per session) into { day, sessions[] }
  * expected by the Zustand store.
  */
-function groupAvailability(
-  flat: DoctorOnboardingResponse['hospitals'][number]['availability'],
-) {
+function groupAvailability(flat: DoctorOnboardingResponse['hospitals'][number]['availability']) {
   const map = new Map<string, typeof flat>();
   for (const row of flat) {
     const day = DAY_OF_WEEK_MAP[row.dayOfWeek] ?? `DAY${row.dayOfWeek}`;
@@ -165,9 +168,7 @@ export function useDoctorOnboardingHydration(): HydrationResult {
       for (const step of completedSteps) {
         store.markStepCompleted(step);
       }
-      const nextStep = completedSteps.length > 0
-        ? Math.min(Math.max(...completedSteps) + 1, 4)
-        : 1;
+      const nextStep = completedSteps.length > 0 ? Math.min(Math.max(...completedSteps) + 1, 4) : 1;
       store.setCurrentStep(nextStep);
       setResumeStep(nextStep);
     } catch {
@@ -188,7 +189,12 @@ export function useDoctorOnboardingHydration(): HydrationResult {
 
 // ─── Hospital Hydration ───────────────────────────────────────────────────
 
-export function useHospitalOnboardingHydration(): HydrationResult {
+/**
+ * @param editMode When true, hydrate the form even for APPROVED hospitals so
+ *   the owner can edit their existing details. Default false keeps the
+ *   original onboarding behaviour (don't load form data once submitted/approved).
+ */
+export function useHospitalOnboardingHydration(editMode: boolean = false): HydrationResult {
   const [loading, setLoading] = useState(true);
   const [resumeStep, setResumeStep] = useState(1);
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
@@ -208,13 +214,17 @@ export function useHospitalOnboardingHydration(): HydrationResult {
         return;
       }
 
-      if (statusRes.status === 'PENDING' || statusRes.status === 'APPROVED') {
+      // In normal onboarding, don't re-hydrate once submitted/approved — but
+      // edit-mode (owner re-editing an approved hospital) NEEDS the data.
+      const skipHydrate =
+        !editMode && (statusRes.status === 'PENDING' || statusRes.status === 'APPROVED');
+      if (skipHydrate) {
         setResumeStep(statusRes.currentStep);
         setLoading(false);
         return;
       }
 
-      // IN_PROGRESS or REJECTED → fetch and hydrate
+      // IN_PROGRESS / REJECTED / (APPROVED in edit mode) → fetch and hydrate
       const data: HospitalOnboardingData = await onboardingService.getHospitalData();
 
       const completedSteps: number[] = [];
@@ -225,8 +235,10 @@ export function useHospitalOnboardingHydration(): HydrationResult {
         store.updateProfile({
           name: p.name ?? '',
           address: p.address ?? '',
-          locationLat: p.locationLat !== null && p.locationLat !== undefined ? String(p.locationLat) : '',
-          locationLng: p.locationLng !== null && p.locationLng !== undefined ? String(p.locationLng) : '',
+          locationLat:
+            p.locationLat !== null && p.locationLat !== undefined ? String(p.locationLat) : '',
+          locationLng:
+            p.locationLng !== null && p.locationLng !== undefined ? String(p.locationLng) : '',
           phone: p.phone ?? '',
           emergencyContact: p.emergencyContact ?? '',
           departments: p.departments ?? [],
@@ -258,9 +270,7 @@ export function useHospitalOnboardingHydration(): HydrationResult {
         store.markStepCompleted(step);
       }
 
-      const nextStep = completedSteps.length > 0
-        ? Math.min(Math.max(...completedSteps) + 1, 3)
-        : 1;
+      const nextStep = completedSteps.length > 0 ? Math.min(Math.max(...completedSteps) + 1, 3) : 1;
       const step = statusRes.currentStep > 0 ? statusRes.currentStep : nextStep;
       store.setCurrentStep(step);
       setResumeStep(step);
@@ -269,7 +279,7 @@ export function useHospitalOnboardingHydration(): HydrationResult {
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -278,4 +288,3 @@ export function useHospitalOnboardingHydration(): HydrationResult {
 
   return { loading, resumeStep, status, rejectionReason };
 }
-

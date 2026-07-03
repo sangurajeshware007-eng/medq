@@ -9,7 +9,6 @@
  *   PUT  /{id}/reschedule → Reschedule booking
  */
 import api from './api';
-import { apiRaw } from './api';
 
 // ─── Constants ───────────────────────────────────────────────────────────
 const BASE = '/api/v1/bookings';
@@ -31,7 +30,7 @@ export interface CreateBookingResponse {
 }
 
 export interface RescheduleRequest {
-  newDate: string;      // YYYY-MM-DD
+  newDate: string; // YYYY-MM-DD
   newSlotStart: string; // "HH:mm-HH:mm" e.g. "09:00-09:15"
 }
 
@@ -54,8 +53,12 @@ export interface BookingResponseItem {
   paymentStatus: string;
   amount: number;
   notes: string | null;
+  cancelledAt?: string | null;
+  completedAt?: string | null;
   canCancel: boolean;
   canReschedule: boolean;
+  /** Backend-supplied: present iff the caller has already reviewed this booking. */
+  reviewId?: string | null;
 }
 
 export interface BookingDoctor {
@@ -105,6 +108,8 @@ export interface BookingListItem {
   amount: number;
   canCancel: boolean;
   canReschedule: boolean;
+  /** Backend-supplied: present iff the caller has already reviewed this booking. */
+  reviewId?: string | null;
 }
 
 export interface PaginationMeta {

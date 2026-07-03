@@ -25,7 +25,19 @@ export type StorageFileType =
   | 'DOCTOR_CERTIFICATE'
   | 'HOSPITAL_LOGO'
   | 'HOSPITAL_FACILITY_PHOTO'
-  | 'HOSPITAL_DOCUMENT';
+  | 'HOSPITAL_DOCUMENT'
+  | 'CITY_IMAGE';
+
+/** Global upload cap. Must match `MAX_UPLOAD_BYTES` in medq-be/.../storage/UploadPolicy.kt. */
+export const MAX_UPLOAD_BYTES = 1 * 1024 * 1024; // 1 MB
+
+/** Thrown when a file is too big — surface its `code` to render the localised toast. */
+export class FileTooLargeError extends Error {
+  readonly code = 'FILE_TOO_LARGE';
+  constructor(public actualBytes: number) {
+    super(`File must be less than ${MAX_UPLOAD_BYTES} bytes (got ${actualBytes})`);
+  }
+}
 
 export interface PresignResponse {
   uploadUrl: string;
@@ -45,11 +57,13 @@ export interface UploadResult {
 async function requestPresignedUrl(
   fileType: StorageFileType,
   contentType: string,
+  contentLength: number,
   fileName?: string,
 ): Promise<PresignResponse> {
   return api.post<PresignResponse>('/api/v1/upload/presign', {
     fileType,
     contentType,
+    contentLength,
     fileName,
   });
 }
@@ -69,33 +83,76 @@ function normaliseMimeType(rawMime: string | undefined): string {
 // ─── Upload to R2/MinIO ───────────────────────────────────────────────────────
 // Must use fetch (not Axios) — request goes directly to R2/MinIO, not our API.
 
-async function uploadToR2(uploadUrl: string, fileUri: string, contentType: string): Promise<void> {
-  const fileResponse = await fetch(fileUri);
-  const blob = await fileResponse.blob();
+async function uploadBlobToR2(uploadUrl: string, blob: Blob, contentType: string): Promise<void> {
+  // Strip query string for log clarity (presign signature is huge)
+  const safeUrl = uploadUrl.split('?')[0];
+  console.log(`📤 Uploading ${blob.size} bytes to ${safeUrl}  (Content-Type: ${contentType})`);
 
-  const uploadResponse = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': contentType },
-    body: blob,
-  });
+  let uploadResponse: Response;
+  try {
+    uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: blob,
+    });
+  } catch (e) {
+    // Network failure — host unreachable / DNS / TLS / firewall
+    console.error('❌ Storage PUT network failure:', e);
+    const msg = (e as Error).message ?? 'Network error';
+    throw new Error(
+      `Could not reach the storage server. ${msg}. ` +
+      `Check that the backend's STORAGE_PUBLIC_ENDPOINT points to a host the phone can reach, ` +
+      `and that the macOS firewall isn't blocking port 9000.`
+    );
+  }
 
   if (!uploadResponse.ok) {
-    throw new Error(`Upload to storage failed (${uploadResponse.status})`);
+    // Try to extract MinIO's XML error body for a precise reason
+    let body = '';
+    try { body = await uploadResponse.text(); } catch { /* ignore */ }
+    console.error(`❌ Storage PUT failed: HTTP ${uploadResponse.status}\n${body}`);
+    // Common MinIO codes — surface them clearly
+    if (body.includes('SignatureDoesNotMatch')) {
+      throw new Error(
+        'Storage rejected the upload (SignatureDoesNotMatch). The presigned URL was signed for a different host than the phone is reaching. ' +
+        'Restart the backend with STORAGE_PUBLIC_ENDPOINT set to the same host the phone uses.'
+      );
+    }
+    if (body.includes('AccessDenied')) {
+      throw new Error('Storage rejected the upload (AccessDenied). Check the bucket policy.');
+    }
+    throw new Error(`Storage upload failed (HTTP ${uploadResponse.status}). ${body.slice(0, 200)}`);
   }
+
+  console.log('✅ Upload completed');
 }
 
-// ─── Public URL rewrite ───────────────────────────────────────────────────────
-// The backend embeds its own STORAGE_PUBLIC_URL in the presign response.
-// On Android emulator / physical device that URL contains 'localhost' which only
-// resolves on iOS simulator. Replace the origin with the env-configured base URL
-// so the returned publicUrl is always device-reachable.
+// ─── Host rewriting for device reachability ─────────────────────────────────
+// The backend embeds its own STORAGE_PUBLIC_ENDPOINT (often "localhost") in BOTH
+// the presigned uploadUrl AND the publicUrl. On a physical phone via Expo Go,
+// "localhost" resolves to the phone itself — so uploads fail and images don't
+// load. Rewrite the origin (scheme + host + port) of any storage URL to match
+// the env-configured EXPO_PUBLIC_STORAGE_PUBLIC_URL so it's reachable from the
+// device. Query strings (presign signatures) are preserved verbatim.
+
+/** "http://192.168.1.2:9000" — extracted once from EXPO_PUBLIC_STORAGE_PUBLIC_URL.
+ *  Regex avoids React Native's incomplete URL polyfill. */
+const STORAGE_HOST_ORIGIN: string | undefined = (() => {
+  const m = STORAGE_PUBLIC_URL.match(/^(https?:\/\/[^/]+)/);
+  return m ? m[1] : undefined;
+})();
+
+/** Replace the origin of a URL with our env-configured storage host. */
+function rewriteHost(url: string | undefined): string | undefined {
+  if (!url || !STORAGE_HOST_ORIGIN) return url;
+  return url.replace(/^https?:\/\/[^/]+/, STORAGE_HOST_ORIGIN);
+}
 
 function rewritePublicUrl(backendUrl: string | undefined): string | undefined {
   if (!backendUrl) return undefined;
-  // Replace everything up to (and including) the bucket name with our env value.
-  // backendUrl pattern: http://<host>:<port>/<bucket>/<key>
-  const afterBucket = backendUrl.replace(/^https?:\/\/[^/]+\/[^/]+/, '');
-  return `${STORAGE_PUBLIC_URL}${afterBucket}`;
+  // Same as rewriteHost — kept as a named alias since it conveys intent
+  // (returns a *display* URL, not a presigned upload URL).
+  return rewriteHost(backendUrl);
 }
 
 // ─── Combined helper ──────────────────────────────────────────────────────────
@@ -112,10 +169,33 @@ async function uploadFile(
   fileName?: string,
 ): Promise<UploadResult> {
   const safeContentType = normaliseMimeType(contentType);
-  const presign = await requestPresignedUrl(fileType, safeContentType, fileName);
-  await uploadToR2(presign.uploadUrl, fileUri, safeContentType);
+
+  // Read the file ONCE here so we know its size before asking the backend for a
+  // presigned URL. Rejecting locally avoids a wasted round trip and surfaces the
+  // size error before the user sees a network error.
+  let blob: Blob;
+  try {
+    const fileResponse = await fetch(fileUri);
+    blob = await fileResponse.blob();
+  } catch (e) {
+    throw new Error(`Could not read the selected file. ${(e as Error).message}`);
+  }
+  if (blob.size > MAX_UPLOAD_BYTES) {
+    throw new FileTooLargeError(blob.size);
+  }
+
+  const presign = await requestPresignedUrl(fileType, safeContentType, blob.size, fileName);
+  // NOTE — DO NOT rewrite presign.uploadUrl. AWS SigV4 includes the Host header
+  // in the signed-headers list, so changing the host invalidates the signature
+  // (MinIO rejects with 403 SignatureDoesNotMatch). The backend must generate
+  // the URL with the correct external host from the start — see
+  // STORAGE_PUBLIC_ENDPOINT in medq-be/docker-compose.yml.
+  await uploadBlobToR2(presign.uploadUrl, blob, safeContentType);
   return {
     objectKey: presign.objectKey,
+    // publicUrl points to the anonymous public-read bucket, which is NOT
+    // signature-protected — host rewriting is safe and necessary for the
+    // image to render on the device.
     publicUrl: rewritePublicUrl(presign.publicUrl),
   };
 }
@@ -126,6 +206,8 @@ async function getSignedUrl(objectKey: string): Promise<string> {
   const result = await api.get<{ url: string }>(
     `/api/v1/upload/signed-url?key=${encodeURIComponent(objectKey)}`,
   );
+  // Same caveat as uploadUrl — signed GETs are SigV4-bound to the host.
+  // Backend must embed the device-reachable host (STORAGE_PUBLIC_ENDPOINT).
   return result.url;
 }
 

@@ -15,6 +15,7 @@ interface InputProps {
   style?: ViewStyle;
   maxLength?: number;
   multiline?: boolean;
+  autoFocus?: boolean;
 }
 
 export default function Input({
@@ -30,6 +31,7 @@ export default function Input({
   style,
   maxLength,
   multiline = false,
+  autoFocus = false,
 }: InputProps) {
   return (
     <View style={[styles.container, style]}>
@@ -47,6 +49,7 @@ export default function Input({
           autoCapitalize={autoCapitalize}
           maxLength={maxLength}
           multiline={multiline}
+          autoFocus={autoFocus}
         />
       </View>
       {error && <Text style={styles.error}>{error}</Text>}

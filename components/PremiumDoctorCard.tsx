@@ -4,7 +4,8 @@ import { Text, View, StyleSheet, Image, ViewStyle, Platform } from 'react-native
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withRepeat, withTiming, withSequence, interpolate } from 'react-native-reanimated';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { crossPlatformShadow } from '../utils/shadow';
-import { GraduationCap, Hospital } from 'lucide-react-native';
+import { GraduationCap, Hospital, MapPin, ShieldCheck, ArrowRight, Clock } from 'lucide-react-native';
+import LocalizedName from './LocalizedName';
 import { formatShortCredential } from '../utils/doctorCredential';
 
 // ── Phase 1: reviews hidden ──────────────────────────────────────────────
@@ -63,76 +64,98 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
   });
 
   if (variant === 'full') {
+    const credential = formatShortCredential(doctor.degree);
     return (
-      <Animated.View style={[styles.card, animatedStyle, style, { flexDirection: 'row', alignItems: 'center', padding: 18 }]}> 
-        <View style={styles.fullImageSection}>
-          <Image source={doctor.photo ? { uri: doctor.photo } : undefined} style={styles.fullDoctorImage} />
-          {doctor.verified && (
-            <View style={styles.fullVerifiedBadge}>
-              <Text style={styles.fullVerifiedIcon}>✓</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.fullInfoSection}>
-          <Text style={styles.fullName} numberOfLines={1}>{doctor.name}</Text>
-          <Text style={styles.fullSpecialization}>{doctor.specialization}</Text>
-          <View style={styles.fullStatsRow}>
-            {/* Phase 1: credential pill in place of rating */}
-            {/* <View style={styles.fullRatingPill}>
-              <Text style={styles.fullStarIcon}>★</Text>
-              <Text style={styles.fullRatingValue}>{doctor.rating.toFixed(1)}</Text>
-            </View> */}
-            {formatShortCredential(doctor.degree) !== '' && (
-              <View style={styles.fullRatingPill}>
-                <GraduationCap size={11} color="#D69E2E" strokeWidth={2.5} />
-                <Text style={[styles.fullRatingValue, { marginLeft: 3 }]}>
-                  {formatShortCredential(doctor.degree)}
-                </Text>
-              </View>
-            )}
-            <Text style={styles.fullStatDot}>·</Text>
-            <Text style={styles.fullStatText}>{doctor.experience} yr</Text>
-            {doctor.patientsServed && (
-              <>
-                <Text style={styles.fullStatDot}>·</Text>
-                <Text style={styles.fullStatText}>{doctor.patientsServed}+ patients</Text>
-              </>
-            )}
-            {doctor.languages && doctor.languages.length > 0 && (
-              <>
-                <Text style={styles.fullStatDot}>·</Text>
-                <Text style={styles.fullStatText}>{doctor.languages.join(', ')}</Text>
-              </>
-            )}
-          </View>
-          {doctor.hospitalName && (
-            <View style={styles.fullHospitalRow}>
-              <Hospital size={12} color="#888" strokeWidth={2} />
-              <Text style={styles.fullHospitalName} numberOfLines={1}>{doctor.hospitalName}</Text>
-              {doctor.distanceKm != null && (
-                <Text style={styles.fullDistanceText}>{doctor.distanceKm.toFixed(1)} km</Text>
+      <Animated.View style={[styles.cardFull, animatedStyle, style]}>
+        <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+          {/* Teal accent stripe — anchors the card to the brand and adds depth */}
+          <View style={styles.accentStripe} />
+
+          {/* Top row: photo + info column (info uses all remaining width) */}
+          <View style={styles.topRow}>
+            <View style={styles.fullImageSection}>
+              <Image
+                source={doctor.photo ? { uri: doctor.photo } : undefined}
+                style={styles.fullDoctorImage}
+              />
+              {doctor.verified && (
+                <View style={styles.fullVerifiedBadge}>
+                  <ShieldCheck size={11} color="#fff" strokeWidth={3} />
+                </View>
               )}
             </View>
-          )}
-          {doctor.availability && (
-            <Text style={styles.fullAvailability}>Available: {doctor.availability}</Text>
-          )}
-          <View style={styles.fullTagsRow}>
-            {doctor.verified && (
-              <View style={styles.fullVerifiedTag}>
-                <Text style={styles.fullVerifiedTagText}>Verified</Text>
+
+            <View style={styles.fullInfoSection}>
+              {/* Name — single line, full available width */}
+              <View style={styles.nameRow}>
+                <LocalizedName name={doctor.name} style={styles.fullName} numberOfLines={1} />
+                {doctor.verified && (
+                  <ShieldCheck size={13} color="#10B981" strokeWidth={2.5} />
+                )}
               </View>
-            )}
+
+              {/* Specialization — single line */}
+              <Text style={styles.fullSpecialization} numberOfLines={1}>
+                {doctor.specialization?.replace(/_/g, ' ')}
+              </Text>
+
+              {/* Meta row: credential + experience as compact chips */}
+              <View style={styles.metaRow}>
+                {credential !== '' && (
+                  <View style={styles.metaChipGold}>
+                    <GraduationCap size={10} color="#B45309" strokeWidth={2.5} />
+                    <Text style={styles.metaChipGoldText} numberOfLines={1}>{credential}</Text>
+                  </View>
+                )}
+                {doctor.experience > 0 && (
+                  <View style={styles.metaChipNeutral}>
+                    <Clock size={10} color="#475569" strokeWidth={2.5} />
+                    <Text style={styles.metaChipNeutralText}>{doctor.experience}+ yrs</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Hospital + distance — single line, ellipsised */}
+              {doctor.hospitalName && (
+                <View style={styles.fullHospitalRow}>
+                  <MapPin size={11} color="#64748B" strokeWidth={2.5} />
+                  <LocalizedName
+                    name={doctor.hospitalName}
+                    style={styles.fullHospitalName}
+                    numberOfLines={1}
+                  />
+                  {doctor.distanceKm != null && (
+                    <View style={styles.distancePill}>
+                      <Text style={styles.fullDistanceText}>
+                        {doctor.distanceKm.toFixed(1)} km
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
-        </View>
-        <View style={styles.fullActionSection}>
-          {doctor.consultationFee && (
-            <Text style={styles.fee}>₹{doctor.consultationFee}</Text>
-          )}
-          <TouchableOpacity style={styles.fullBookButton} onPress={onPress} activeOpacity={0.85}>
-            <Text style={styles.fullBookButtonText}>Book</Text>
-          </TouchableOpacity>
-        </View>
+
+          {/* Bottom row: fee left, Book Now button right (stretched) */}
+          <View style={styles.divider} />
+          <View style={styles.bottomRow}>
+            {doctor.consultationFee ? (
+              <View style={styles.feeBlock}>
+                <Text style={styles.feeLabel}>Consultation</Text>
+                <Text style={styles.feeAmount}>₹{doctor.consultationFee}</Text>
+              </View>
+            ) : <View />}
+
+            <TouchableOpacity
+              style={styles.bookCta}
+              onPress={onPress}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.bookCtaText}>Book Now</Text>
+              <ArrowRight size={14} color="#fff" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Animated.View>
     );
   }
@@ -147,7 +170,7 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
         style={styles.touch}
       >
         <Image source={doctor.photo ? { uri: doctor.photo } : undefined} style={styles.image} />
-        <Text style={styles.name} numberOfLines={1}>{doctor.name}</Text>
+        <LocalizedName name={doctor.name} style={styles.name} numberOfLines={1} />
         <Text style={styles.spec}>{doctor.specialization}</Text>
         <View style={styles.row}>
           {/* Phase 1: credential instead of rating */}
@@ -228,137 +251,181 @@ const styles = StyleSheet.create({
     color: '#2e7d32',
     fontSize: 15,
   },
-  // Full card styles
+  // ── New "full" variant — premium two-row layout with brand accent ────
+  cardFull: {
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    marginBottom: 14,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    ...crossPlatformShadow({ color: '#0A7E8C', opacity: 0.10, offsetY: 6, radius: 16, elevation: 6 }),
+  },
+  accentStripe: {
+    position: 'absolute',
+    left: 0, top: 0, bottom: 0,
+    width: 4,
+    backgroundColor: '#0A7E8C',
+  },
+  topRow: {
+    flexDirection: 'row',
+    padding: 14,
+    paddingLeft: 18,                  // accommodate the 4 px accent stripe
+    gap: 12,
+  },
   fullImageSection: {
-    marginRight: 12,
+    position: 'relative',
   },
   fullDoctorImage: {
     width: 72,
     height: 72,
-    borderRadius: 36,
-    backgroundColor: '#f3f3f7',
+    borderRadius: 18,                 // squircle — feels more modern than a circle
+    backgroundColor: '#F1F5F9',
   },
   fullVerifiedBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4caf50',
+    bottom: -4,
+    right: -4,
+    width: 22, height: 22,
+    borderRadius: 11,
+    backgroundColor: '#10B981',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 2.5,
     borderColor: '#fff',
-  },
-  fullVerifiedIcon: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '900',
   },
   fullInfoSection: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,                      // critical — lets numberOfLines truncate cleanly
     justifyContent: 'center',
+    gap: 4,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   fullName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#222',
-    marginBottom: 2,
+    color: '#1B2838',
+    flexShrink: 1,
+    minWidth: 0,
   },
   fullSpecialization: {
-    fontSize: 13,
-    color: '#1976d2',
+    fontSize: 12,
+    color: '#0A7E8C',
     fontWeight: '700',
-    marginBottom: 6,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
-  fullStatsRow: {
+  metaRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
-    marginBottom: 4,
+    marginTop: 2,
   },
-  fullRatingPill: {
+  metaChipGold: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8E7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    gap: 3,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  fullStarIcon: {
+  metaChipGoldText: {
     fontSize: 11,
-    color: '#FFD700',
-    marginRight: 2,
+    fontWeight: '800',
+    color: '#92400E',
   },
-  fullRatingValue: {
-    fontSize: 12,
+  metaChipNeutral: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  metaChipNeutralText: {
+    fontSize: 11,
     fontWeight: '700',
-    color: '#222',
-  },
-  fullStatDot: {
-    color: '#888',
-    fontSize: 8,
-    marginHorizontal: 4,
-  },
-  fullStatText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
+    color: '#475569',
   },
   fullHospitalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 4,
+    marginTop: 4,
   },
   fullHospitalName: {
     fontSize: 12,
-    color: '#888',
+    color: '#64748B',
+    fontWeight: '600',
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  distancePill: {
+    backgroundColor: '#E6F7F9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   fullDistanceText: {
     fontSize: 11,
-    color: '#1976d2',
-    fontWeight: '600',
-    marginLeft: 8,
+    color: '#0A7E8C',
+    fontWeight: '800',
   },
-  fullTagsRow: {
+  divider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginHorizontal: 14,
+  },
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  fullVerifiedTag: {
-    backgroundColor: '#E8F8EE',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  fullVerifiedTagText: {
-    fontSize: 11,
-    color: '#4caf50',
-    fontWeight: '700',
-  },
-  fullAvailability: {
-    fontSize: 11,
-    color: '#888',
-    fontWeight: '500',
-  },
-  fullActionSection: {
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    marginLeft: 8,
-  },
-  fullBookButton: {
-    backgroundColor: '#1976d2',
+    justifyContent: 'space-between',
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingLeft: 18,
+    paddingVertical: 10,
+    gap: 12,
   },
-  fullBookButtonText: {
-    color: '#fff',
-    fontSize: 12,
+  feeBlock: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  feeLabel: {
+    fontSize: 10,
+    color: '#94A3B8',
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  feeAmount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1B2838',
+    marginTop: 1,
+  },
+  bookCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0A7E8C',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    ...crossPlatformShadow({ color: '#0A7E8C', opacity: 0.25, offsetY: 4, radius: 8, elevation: 4 }),
+  },
+  bookCtaText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
 });
 

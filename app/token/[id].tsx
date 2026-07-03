@@ -6,6 +6,7 @@ import { Hospital, Lightbulb, Zap, ChevronLeft } from 'lucide-react-native';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
 import LiveTokenCard from '../../components/LiveTokenCard';
+import LocalizedName from '../../components/LocalizedName';
 import Button from '../../components/Button';
 import { useDoctor } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
@@ -54,7 +55,7 @@ export default function TokenTrackerScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>←</Text>
@@ -73,7 +74,7 @@ export default function TokenTrackerScreen() {
         <View style={styles.hospitalInfo}>
           <Hospital size={24} color={Colors.primary} strokeWidth={1.8} />
           <View>
-            <Text style={styles.hospitalName}>{doctor.hospital?.name || ''}</Text>
+            <LocalizedName name={doctor.hospital?.name || ''} style={styles.hospitalName} />
             <Text style={styles.hospitalAddress}>{doctor.hospital?.address || ''}</Text>
           </View>
         </View>

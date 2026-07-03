@@ -1,5 +1,5 @@
 /**
- * Semantic color tokens for MedReachPlus
+ * Semantic color tokens for MedQ+
  *
  * NEVER hardcode hex values in components — always import from here.
  * Structured as semantic layers: brand → surface → text → state

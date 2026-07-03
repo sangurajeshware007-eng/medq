@@ -4,6 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 
+import { useLanguage } from '../context/LanguageContext';
 import {
   hospitalService,
   doctorService,
@@ -28,8 +29,9 @@ import type {
   BookingListResponse,
   RescheduleRequest,
   SubmitReviewRequest,
-  SubmitReviewResponse,
+  UpdateReviewRequest,
   ReviewItem,
+  PagedReviews,
   LiveQueueState,
   MyTokenPosition,
   UnifiedSearchResult,
@@ -37,8 +39,11 @@ import type {
   NearbyParams,
   ApiError,
 } from '../services';
+import authService from '../services/authService';
+import cityImageService, { type CityImage } from '../services/cityImageService';
 import dashboardService from '../services/dashboardService';
 import type {
+  AppointmentSummary,
   DoctorDashboard,
   DoctorDateAppointments,
   HospitalManagerDashboard,
@@ -52,6 +57,10 @@ import type {
   DoctorOnboardingStatusSummary,
   HospitalOnboardingStatusSummary,
 } from '../services/onboardingService';
+import timeOffService, {
+  type TimeOffEntry,
+  type CreateTimeOffRequest,
+} from '../services/timeOffService';
 
 // ─── Query Keys ──────────────────────────────────────────────────────────
 export const queryKeys = {
@@ -63,13 +72,17 @@ export const queryKeys = {
     ['doctors', 'nearby', lat, lng, radiusKm] as const,
   doctors: (params?: DoctorFilterParams) => ['doctors', params] as const,
   doctor: (id: number | string) => ['doctor', id] as const,
-  doctorSlots: (id: number | string, date: string) => ['doctor', id, 'slots', date] as const,
+  doctorSlots: (id: number | string, date: string, hospitalId?: string) =>
+    ['doctor', id, 'slots', date, hospitalId ?? null] as const,
   doctorReviews: (id: number | string) => ['doctor', id, 'reviews'] as const,
   bookings: (params?: BookingListParams) => ['bookings', params] as const,
   booking: (id: number | string) => ['booking', id] as const,
   upcomingBookings: (page: number, size: number) => ['bookings', 'upcoming', page, size] as const,
   pastBookings: (page: number, size: number) => ['bookings', 'past', page, size] as const,
   reviews: (doctorId: number | string) => ['reviews', doctorId] as const,
+  reviewsPage: (doctorId: number | string, page: number, size: number) =>
+    ['reviews', doctorId, 'page', page, size] as const,
+  myReviewForBooking: (bookingId: number | string) => ['reviews', 'by-booking', bookingId] as const,
   liveQueue: (doctorId: number | string) => ['tokens', 'live', doctorId] as const,
   myToken: (bookingId: number | string) => ['tokens', 'my', bookingId] as const,
   search: (query: string) => ['search', query] as const,
@@ -81,6 +94,10 @@ export const queryKeys = {
   adminPending: ['admin', 'pending'] as const,
   adminDoctors: ['admin', 'doctors'] as const,
   adminHospitals: ['admin', 'hospitals'] as const,
+  cityImage: (city: string, state?: string) =>
+    ['city-image', city.toLowerCase(), state?.toLowerCase() ?? null] as const,
+  cityImagesNearby: (lat: number, lng: number) =>
+    ['city-images', 'nearby', lat.toFixed(3), lng.toFixed(3)] as const,
 };
 
 // ─── Hospital Hooks ──────────────────────────────────────────────────────
@@ -182,15 +199,16 @@ export function useDoctor(
   });
 }
 
-/** Fetch available time slots for a doctor on a specific date */
+/** Fetch available time slots for a doctor on a specific date (optionally at a specific hospital) */
 export function useDoctorSlots(
   id: number | string,
   date: string,
+  hospitalId?: string,
   options?: Omit<UseQueryOptions<AvailableSlotsResponse, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<AvailableSlotsResponse, ApiError>({
-    queryKey: queryKeys.doctorSlots(id, date),
-    queryFn: () => doctorService.getAvailableSlots(id, date),
+    queryKey: queryKeys.doctorSlots(id, date, hospitalId),
+    queryFn: () => doctorService.getAvailableSlots(id, date, hospitalId),
     enabled: !!id && !!date,
     staleTime: 60 * 1000, // 1 min — slots change quickly
     ...options,
@@ -321,28 +339,78 @@ export function usePastBookings(
 
 // ─── Review Hooks ────────────────────────────────────────────────────────
 
-/** Fetch all reviews for a doctor */
-export function useReviews(
+/** Paginated reviews for a doctor */
+export function useDoctorReviewsPaged(
   doctorId: number | string,
-  options?: Omit<UseQueryOptions<ReviewItem[], ApiError>, 'queryKey' | 'queryFn'>,
+  params?: { page?: number; size?: number },
+  options?: Omit<UseQueryOptions<PagedReviews, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
-  return useQuery<ReviewItem[], ApiError>({
-    queryKey: queryKeys.reviews(doctorId),
-    queryFn: () => reviewService.getByDoctorId(doctorId),
+  const page = params?.page ?? 0;
+  const size = params?.size ?? 10;
+  return useQuery<PagedReviews, ApiError>({
+    queryKey: queryKeys.reviewsPage(doctorId, page, size),
+    queryFn: () => reviewService.getByDoctorId(doctorId, { page, size }),
     enabled: !!doctorId,
     staleTime: 2 * 60 * 1000,
     ...options,
   });
 }
 
-/** Submit a review (mutation) */
+/** Convenience: first page only, returns the review list directly. */
+export function useReviews(
+  doctorId: number | string,
+  options?: Omit<UseQueryOptions<ReviewItem[], ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<ReviewItem[], ApiError>({
+    queryKey: queryKeys.reviews(doctorId),
+    queryFn: () =>
+      reviewService.getByDoctorId(doctorId, { page: 0, size: 10 }).then((p) => p.content),
+    enabled: !!doctorId,
+    staleTime: 2 * 60 * 1000,
+    ...options,
+  });
+}
+
+/** Fetch the caller's review for a booking (null if not yet rated). */
+export function useMyReviewForBooking(
+  bookingId: number | string | undefined | null,
+  options?: Omit<UseQueryOptions<ReviewItem | null, ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<ReviewItem | null, ApiError>({
+    queryKey: queryKeys.myReviewForBooking(bookingId ?? ''),
+    queryFn: () => reviewService.getMyReviewForBooking(String(bookingId)),
+    enabled: !!bookingId,
+    staleTime: 60 * 1000,
+    ...options,
+  });
+}
+
+/** Submit a new review for a completed booking. */
 export function useSubmitReview() {
   const queryClient = useQueryClient();
-  return useMutation<SubmitReviewResponse, ApiError, SubmitReviewRequest>({
+  return useMutation<ReviewItem, ApiError, SubmitReviewRequest>({
     mutationFn: (data) => reviewService.submit(data),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.reviews(variables.doctorId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.doctorReviews(variables.doctorId) });
+    onSuccess: (review) => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctorReviews(review.doctorId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctor(review.doctorId) });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.booking(review.bookingId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myReviewForBooking(review.bookingId) });
+    },
+  });
+}
+
+/** Edit an existing review within the 7-day window. */
+export function useUpdateReview() {
+  const queryClient = useQueryClient();
+  return useMutation<ReviewItem, ApiError, { reviewId: string; data: UpdateReviewRequest }>({
+    mutationFn: ({ reviewId, data }) => reviewService.update(reviewId, data),
+    onSuccess: (review) => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctorReviews(review.doctorId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctor(review.doctorId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myReviewForBooking(review.bookingId) });
     },
   });
 }
@@ -381,15 +449,20 @@ export function useMyToken(
 
 // ─── Search Hooks ────────────────────────────────────────────────────────
 
-/** Unified name-based search across doctors + hospitals */
+/** Unified name-based search across doctors + hospitals.
+ * Auto-injects the current UI language into `params.lang` so server-side
+ * localization (when available) flows through without callers thinking about it.
+ * Caller-supplied `lang` always wins. */
 export function useUnifiedSearch(
   params: UnifiedSearchParams | null,
   options?: Omit<UseQueryOptions<UnifiedSearchResult, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
+  const { language } = useLanguage();
+  const merged = params ? { lang: language, ...params } : null;
   return useQuery<UnifiedSearchResult, ApiError>({
-    queryKey: params ? queryKeys.search(params.query) : ['search'],
-    queryFn: () => searchService.search(params!),
-    enabled: !!params && params.query.length >= 2,
+    queryKey: merged ? [...queryKeys.search(merged.query), merged.lang] : ['search'],
+    queryFn: () => searchService.search(merged!),
+    enabled: !!merged && merged.query.length >= 2,
     staleTime: 2 * 60 * 1000,
     ...options,
   });
@@ -409,7 +482,10 @@ export function useDoctorOnboardingStatus(
 }
 
 export function useHospitalOnboardingStatus(
-  options?: Omit<UseQueryOptions<HospitalOnboardingStatusSummary, ApiError>, 'queryKey' | 'queryFn'>,
+  options?: Omit<
+    UseQueryOptions<HospitalOnboardingStatusSummary, ApiError>,
+    'queryKey' | 'queryFn'
+  >,
 ) {
   return useQuery<HospitalOnboardingStatusSummary, ApiError>({
     queryKey: queryKeys.hospitalOnboardingStatus,
@@ -438,6 +514,27 @@ export function useDoctorAppointments(date: string) {
     queryFn: () => dashboardService.getAppointmentsForDate(date),
     staleTime: 30 * 1000,
     enabled: !!date,
+  });
+}
+
+/**
+ * Doctor flips one of their CONFIRMED bookings to COMPLETED or NO_SHOW.
+ * Invalidates the dashboard (revenue) and the date's appointments list so
+ * the UI updates straight after a successful mutation.
+ */
+export function useMarkAppointmentStatus() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    AppointmentSummary,
+    ApiError,
+    { bookingId: string; status: 'COMPLETED' | 'NO_SHOW' }
+  >({
+    mutationFn: ({ bookingId, status }) =>
+      dashboardService.markAppointmentStatus(bookingId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctorDashboard });
+      queryClient.invalidateQueries({ queryKey: ['doctorAppointments'] });
+    },
   });
 }
 
@@ -553,9 +650,7 @@ export function useRejectDoctor() {
         return {
           ...old,
           recentDoctors: old.recentDoctors.map((d) =>
-            d.doctorId === doctorId
-              ? { ...d, approvalStatus: 'REJECTED', isActive: false }
-              : d,
+            d.doctorId === doctorId ? { ...d, approvalStatus: 'REJECTED', isActive: false } : d,
           ),
           pendingApprovals: {
             ...old.pendingApprovals,
@@ -653,9 +748,7 @@ export function useRejectHospital() {
         return {
           ...old,
           recentHospitals: old.recentHospitals.map((h) =>
-            h.hospitalId === hospitalId
-              ? { ...h, approvalStatus: 'REJECTED', isActive: false }
-              : h,
+            h.hospitalId === hospitalId ? { ...h, approvalStatus: 'REJECTED', isActive: false } : h,
           ),
           pendingApprovals: {
             ...old.pendingApprovals,
@@ -668,9 +761,7 @@ export function useRejectHospital() {
         (old: AdminHospitalSummary[] | undefined) => {
           if (!old) return old;
           return old.map((h) =>
-            h.hospitalId === hospitalId
-              ? { ...h, approvalStatus: 'REJECTED', isActive: false }
-              : h,
+            h.hospitalId === hospitalId ? { ...h, approvalStatus: 'REJECTED', isActive: false } : h,
           );
         },
       );
@@ -775,6 +866,100 @@ export function useToggleHospitalStatus() {
     onError: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.adminHospitals });
       queryClient.invalidateQueries({ queryKey: queryKeys.adminDashboard });
+    },
+  });
+}
+
+// ─── City Image (welcome-hero background) ─────────────────────────────────
+
+/**
+ * Fetch the landmark image for a city by name. Returns null when none is
+ * configured. Long staleTime (10 min) because city landmarks rarely change.
+ */
+export function useCityImage(city?: string, state?: string) {
+  return useQuery<CityImage | null, ApiError>({
+    queryKey: queryKeys.cityImage(city ?? '', state),
+    queryFn: () => cityImageService.getByCity(city!, state),
+    enabled: !!city && city.trim().length > 0,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch all images whose coverage area contains the given coordinates.
+ * Sorted by distance ascending — clients render the first one as the
+ * welcome-hero background. Multiple results = overlapping coverage areas.
+ */
+export function useNearbyCityImages(lat?: number, lng?: number) {
+  return useQuery<CityImage[], ApiError>({
+    queryKey: queryKeys.cityImagesNearby(lat ?? 0, lng ?? 0),
+    queryFn: () => cityImageService.getNearby(lat!, lng!),
+    enabled: Number.isFinite(lat) && Number.isFinite(lng),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+// ─── Self-service account lifecycle ─────────────────────────────────────────
+
+/**
+ * Deactivate the current user's account (reversible).
+ * Server cancels upcoming bookings and revokes all refresh tokens. Caller is
+ * responsible for clearing local auth state and navigating to the login screen.
+ *
+ * We intentionally do NOT call queryClient.clear() in onSuccess — that triggers
+ * refetches on still-mounted screens (e.g. doctor onboarding status on the
+ * Profile tab), and those refetches race the local logout() that clears tokens,
+ * producing harmless-but-noisy 403s. The existing logout() flow doesn't clear
+ * the cache either; we follow the same pattern.
+ */
+export function useDeactivateProfile() {
+  return useMutation<void, ApiError, string | undefined>({
+    mutationFn: (reason) => authService.deactivateProfile(reason),
+  });
+}
+
+/**
+ * Permanently delete the current user's account (irreversible).
+ * `confirmPhone` must match the user's current phone — server enforces.
+ */
+export function useDeleteProfile() {
+  return useMutation<void, ApiError, { confirmPhone: string; reason?: string }>({
+    mutationFn: ({ confirmPhone, reason }) => authService.deleteProfile(confirmPhone, reason),
+  });
+}
+
+// ─── Doctor time off ────────────────────────────────────────────────────────
+
+export function useTimeOffList() {
+  return useQuery<TimeOffEntry[], ApiError>({
+    queryKey: ['doctorTimeOff'],
+    queryFn: () => timeOffService.list(),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useCreateTimeOff() {
+  const queryClient = useQueryClient();
+  return useMutation<TimeOffEntry, ApiError, CreateTimeOffRequest>({
+    mutationFn: (data) => timeOffService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctorTimeOff'] });
+      // Slot availability + dashboard appointments are now stale.
+      queryClient.invalidateQueries({ queryKey: ['doctor'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorAppointments'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorDashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+}
+
+export function useDeleteTimeOff() {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => timeOffService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctorTimeOff'] });
+      queryClient.invalidateQueries({ queryKey: ['doctor'] });
     },
   });
 }

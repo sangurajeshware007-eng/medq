@@ -1,4 +1,4 @@
-# MedReach+ — React Native (Expo) Medical App
+# MedQ+ — React Native (Expo) Medical App
 
 ## Quick Start
 

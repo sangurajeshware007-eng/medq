@@ -46,7 +46,7 @@ export default function DoctorStep4() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ChevronLeft size={24} color={Colors.text} strokeWidth={2} />
@@ -95,12 +95,6 @@ export default function DoctorStep4() {
             <Text style={styles.reviewLabel}>Registration No.</Text>
             <Text style={styles.reviewValue}>{profile.registrationNumber || '—'}</Text>
           </View>
-          {profile.teleConsultation && (
-            <View style={styles.reviewRow}>
-              <Text style={styles.reviewLabel}>Tele-consult Fee</Text>
-              <Text style={styles.reviewValue}>₹{profile.teleConsultationFee}</Text>
-            </View>
-          )}
           {profile.bio ? (
             <View style={[styles.reviewRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
               <Text style={styles.reviewLabel}>Bio</Text>

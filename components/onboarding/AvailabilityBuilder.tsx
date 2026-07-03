@@ -19,7 +19,7 @@ const DAY_LABELS: Record<string, string> = {
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
 
 const SESSION_NAMES = ['Morning OPD', 'Afternoon OPD', 'Evening OPD', 'Surgery Slots', 'Emergency'];
-const SESSION_TYPES = ['OPD', 'SURGERY', 'EMERGENCY', 'TELE'];
+const SESSION_TYPES = ['OPD', 'SURGERY', 'EMERGENCY'];
 const SLOT_DURATIONS = [10, 15, 20, 30];
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2).toString().padStart(2, '0');
@@ -45,13 +45,32 @@ const timeToMinutes = (t: string): number => {
 const timesOverlap = (s1: string, e1: string, s2: string, e2: string): boolean =>
   timeToMinutes(s1) < timeToMinutes(e2) && timeToMinutes(e1) > timeToMinutes(s2);
 
+/**
+ * Sessions the doctor already has at OTHER hospitals on the same weekday.
+ * Used to block setting up an overlapping session here — one doctor can't
+ * physically be at two hospitals at once.
+ */
+export interface CrossHospitalSession {
+  hospitalName: string;
+  sessionName: string;
+  startTime: string;
+  endTime: string;
+}
+
 interface AvailabilityBuilderProps {
   hospitalName: string;
   availability: DayAvailability[];
   onChange: (availability: DayAvailability[]) => void;
+  /** Keyed by day code (MON, TUE…). Sessions from other hospitals to block against. */
+  crossHospitalBusy?: Record<string, CrossHospitalSession[]>;
 }
 
-export default function AvailabilityBuilder({ hospitalName, availability, onChange }: AvailabilityBuilderProps) {
+export default function AvailabilityBuilder({
+  hospitalName,
+  availability,
+  onChange,
+  crossHospitalBusy,
+}: AvailabilityBuilderProps) {
   // ── Session editor state ──────────────────────────────────────────────────
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [editingDay, setEditingDay] = useState('');
@@ -74,12 +93,24 @@ export default function AvailabilityBuilder({ hospitalName, availability, onChan
         .filter((_, i) => i !== editingIndex)
     : [];
 
+  // Same-day sessions at OTHER hospitals — also block these so the doctor
+  // can't be scheduled at two places at the same time.
+  const crossBlockedSessions: CrossHospitalSession[] = editingDay
+    ? crossHospitalBusy?.[editingDay] ?? []
+    : [];
+
   // Returns true if the given time falls inside any blocked session's range
-  const isTimeConflicted = (time: string): boolean =>
-    blockedSessions.some((s) => {
-      const t = timeToMinutes(time);
-      return t >= timeToMinutes(s.startTime) && t < timeToMinutes(s.endTime);
-    });
+  // (own-hospital or cross-hospital).
+  const isTimeConflicted = (time: string): boolean => {
+    const t = timeToMinutes(time);
+    const insideOwn = blockedSessions.some(
+      (s) => t >= timeToMinutes(s.startTime) && t < timeToMinutes(s.endTime),
+    );
+    if (insideOwn) return true;
+    return crossBlockedSessions.some(
+      (s) => t >= timeToMinutes(s.startTime) && t < timeToMinutes(s.endTime),
+    );
+  };
 
   // ── Day toggle ────────────────────────────────────────────────────────────
   const toggleDay = (day: string) => {
@@ -113,13 +144,25 @@ export default function AvailabilityBuilder({ hospitalName, availability, onChan
       setOverlapError('End time must be after start time.');
       return;
     }
-    // Validate no overlap with other sessions on the same day
+    // Validate no overlap with other sessions on the same day (same hospital).
     const conflict = blockedSessions.find((s) =>
       timesOverlap(editingSession.startTime, editingSession.endTime, s.startTime, s.endTime)
     );
     if (conflict) {
       setOverlapError(
         `Overlaps with "${conflict.sessionName}" (${conflict.startTime}–${conflict.endTime}). Choose a different time.`
+      );
+      return;
+    }
+    // Validate no overlap with sessions at OTHER hospitals on the same day.
+    const crossConflict = crossBlockedSessions.find((s) =>
+      timesOverlap(editingSession.startTime, editingSession.endTime, s.startTime, s.endTime)
+    );
+    if (crossConflict) {
+      setOverlapError(
+        `Overlaps with your session at ${crossConflict.hospitalName} ` +
+        `(${crossConflict.startTime}–${crossConflict.endTime}). ` +
+        `You can't be at two hospitals at the same time.`,
       );
       return;
     }
@@ -284,12 +327,18 @@ export default function AvailabilityBuilder({ hospitalName, availability, onChan
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {blockedSessions.length > 0 && (
+              {(blockedSessions.length > 0 || crossBlockedSessions.length > 0) && (
                 <View style={styles.blockedInfo}>
                   <Text style={styles.blockedInfoTitle}>Already scheduled on {DAY_LABELS[editingDay]}:</Text>
                   {blockedSessions.map((s, i) => (
-                    <Text key={i} style={styles.blockedInfoItem}>
+                    <Text key={`own-${i}`} style={styles.blockedInfoItem}>
                       • {s.startTime}–{s.endTime}  {s.sessionName}
+                    </Text>
+                  ))}
+                  {crossBlockedSessions.map((s, i) => (
+                    <Text key={`cross-${i}`} style={styles.blockedInfoItem}>
+                      • {s.startTime}–{s.endTime}  {s.sessionName}{' '}
+                      <Text style={styles.blockedInfoHospital}>@ {s.hospitalName}</Text>
                     </Text>
                   ))}
                 </View>
@@ -561,6 +610,7 @@ const styles = StyleSheet.create({
   },
   blockedInfoTitle: { fontSize: 12, fontWeight: '700', color: '#B45309', marginBottom: 4 },
   blockedInfoItem: { fontSize: 12, color: '#92400E', marginBottom: 2 },
+  blockedInfoHospital: { fontSize: 11, color: '#B45309', fontWeight: '700' },
   timePillConflicted: { backgroundColor: '#FFF3CD', borderColor: '#FFC107' },
   timePillTextConflicted: { color: '#92400E' },
   overlapError: {

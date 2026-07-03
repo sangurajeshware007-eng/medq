@@ -3,7 +3,7 @@
  */
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
   Image, ActivityIndicator, TextInput, Modal, FlatList, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,11 +17,13 @@ import {
 import { crossPlatformShadow } from '../../../utils/shadow';
 import { useDoctorOnboardingStore } from '../../../store/doctorOnboardingStore';
 import onboardingService from '../../../services/onboardingService';
-import storageService from '../../../services/storageService';
+import storageService, { FileTooLargeError } from '../../../services/storageService';
 import StepProgressBar from '../../../components/onboarding/StepProgressBar';
 import ChipSelector from '../../../components/onboarding/ChipSelector';
+import DocumentUploadTile from '../../../components/onboarding/DocumentUploadTile';
 import Input from '../../../components/Input';
 import Button from '../../../components/Button';
+import { useLanguage } from '../../../context/LanguageContext';
 
 
 const GENDERS = [
@@ -40,10 +42,13 @@ const STEP_LABELS = ['Profile', 'Details', 'Hospitals', 'Review'];
 export default function DoctorStep1() {
   const router = useRouter();
   const { profile, updateProfile, markStepCompleted, setCurrentStep, completedSteps } = useDoctorOnboardingStore();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [showSpecModal, setShowSpecModal] = useState(false);
   const [specSearch, setSpecSearch] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customSpec, setCustomSpec] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -78,7 +83,61 @@ export default function DoctorStep1() {
     setShowSpecModal(false);
     setSpecSearch('');
     setExpandedCategories(new Set());
+    setShowCustomInput(false);
+    setCustomSpec('');
     setErrors((e) => ({ ...e, specialization: '' }));
+  };
+
+  const submitCustomSpec = () => {
+    const v = customSpec.trim();
+    if (!v) return;
+    selectSpec(v);
+  };
+
+  /**
+   * Upload the medical registration certificate to the private bucket.
+   * The DocumentUploadTile component handles the ImagePicker — we just receive
+   * the picked URI/mime, validate, push to storage, and update the store.
+   */
+  const handlePickCertificate = async (uri: string, fileName: string, mime: string) => {
+    if (!['image/jpeg', 'image/png'].includes(mime)) {
+      Alert.alert(
+        t('certificateFormatHint') || 'Format not supported',
+        t('certificateFormatHint') || 'Please choose a JPEG or PNG image.',
+      );
+      return;
+    }
+    updateProfile({
+      registrationCertificateUri: uri,
+      registrationCertificateFileName: fileName,
+      registrationCertificateUploadStatus: 'uploading',
+    });
+    setErrors((e) => ({ ...e, registrationCertificate: '' }));
+    try {
+      const { objectKey } = await storageService.uploadFile('DOCTOR_CERTIFICATE', uri, mime, fileName);
+      updateProfile({
+        registrationCertificateKey: objectKey,
+        registrationCertificateUploadStatus: 'done',
+      });
+    } catch (err) {
+      updateProfile({
+        registrationCertificateKey: '',
+        registrationCertificateUploadStatus: 'error',
+      });
+      const msg = err instanceof FileTooLargeError
+        ? t('certificateTooLarge') || 'Certificate must be less than 1 MB.'
+        : t('certificateUploadFailed') || 'Could not upload the certificate. Please try again.';
+      Alert.alert(t('uploadCertificate') || 'Upload certificate', msg);
+    }
+  };
+
+  const handleRemoveCertificate = () => {
+    updateProfile({
+      registrationCertificateUri: '',
+      registrationCertificateFileName: '',
+      registrationCertificateKey: '',
+      registrationCertificateUploadStatus: 'idle',
+    });
   };
 
   const handlePickAvatar = async () => {
@@ -112,6 +171,12 @@ export default function DoctorStep1() {
     if (!profile.consultationFee || Number(profile.consultationFee) <= 0)
       errs.consultationFee = 'Consultation fee must be greater than 0';
     if (!profile.registrationNumber) errs.registrationNumber = 'Registration number is required';
+    if (
+      !profile.registrationCertificateKey ||
+      profile.registrationCertificateUploadStatus !== 'done'
+    ) {
+      errs.registrationCertificate = t('certificateRequired') || 'Registration certificate is required';
+    }
     if (profile.bio.length > 500) errs.bio = 'Bio must be 500 characters or less';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -126,12 +191,13 @@ export default function DoctorStep1() {
         gender: profile.gender,
         dateOfBirth: profile.dateOfBirth || undefined,
         consultationFee: Number(profile.consultationFee),
-        teleConsultation: profile.teleConsultation,
-        teleConsultationFee: profile.teleConsultation ? Number(profile.teleConsultationFee) || undefined : undefined,
+        // Tele-consultation hidden in this phase — always submitted as off.
+        teleConsultation: false,
         clinicAddress: profile.clinicAddress || undefined,
         bio: profile.bio || undefined,
         languages: profile.languages,
         registrationNumber: profile.registrationNumber,
+        registrationCertificateKey: profile.registrationCertificateKey,
         practiceStartedYear: profile.practiceStartedYear ? Number(profile.practiceStartedYear) : undefined,
         avatarUrl: profile.avatarUrl || undefined,
       });
@@ -147,7 +213,7 @@ export default function DoctorStep1() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -218,7 +284,7 @@ export default function DoctorStep1() {
           presentationStyle="pageSheet"
           onRequestClose={() => { setShowSpecModal(false); setSpecSearch(''); }}
         >
-          <SafeAreaView style={styles.modalContainer} edges={['top']}>
+          <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
             <KeyboardAvoidingView
               style={{ flex: 1 }}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -302,6 +368,50 @@ export default function DoctorStep1() {
                       </View>
                     );
                   }}
+                  ListFooterComponent={
+                    showCustomInput ? (
+                      <View style={styles.customInputBox}>
+                        <Text style={styles.customInputLabel}>Enter your specialization</Text>
+                        <TextInput
+                          style={styles.customInputField}
+                          value={customSpec}
+                          onChangeText={setCustomSpec}
+                          placeholder="e.g., Aerospace Medicine"
+                          placeholderTextColor={Colors.textLight}
+                          autoFocus
+                          returnKeyType="done"
+                          onSubmitEditing={submitCustomSpec}
+                        />
+                        <View style={styles.customInputRow}>
+                          <TouchableOpacity
+                            style={styles.customCancelBtn}
+                            onPress={() => { setShowCustomInput(false); setCustomSpec(''); }}
+                            activeOpacity={0.75}
+                          >
+                            <Text style={styles.customCancelText}>Cancel</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.customSaveBtn, !customSpec.trim() && styles.customSaveBtnDisabled]}
+                            onPress={submitCustomSpec}
+                            disabled={!customSpec.trim()}
+                            activeOpacity={0.75}
+                          >
+                            <Text style={styles.customSaveText}>Save</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.otherSpecRow}
+                        onPress={() => setShowCustomInput(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.otherSpecEmoji}>📝</Text>
+                        <Text style={styles.otherSpecText}>Other (Specify Your Own)</Text>
+                        <ChevronRight size={14} color={Colors.primary} strokeWidth={2} />
+                      </TouchableOpacity>
+                    )
+                  }
                 />
               ) : (
                 // Flat search results
@@ -311,7 +421,27 @@ export default function DoctorStep1() {
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={{ paddingBottom: 32 }}
                   ListEmptyComponent={
-                    <Text style={styles.noResults}>No specializations match "{specSearch}"</Text>
+                    <View style={styles.noResultsContainer}>
+                      <Text style={styles.noResults}>No match for "{specSearch}"</Text>
+                      <TouchableOpacity
+                        style={styles.useCustomBtn}
+                        onPress={() => selectSpec(specSearch.trim())}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={styles.useCustomBtnText}>Use "{specSearch.trim()}" as my specialization</Text>
+                      </TouchableOpacity>
+                    </View>
+                  }
+                  ListFooterComponent={
+                    filteredSpecs.length > 0 ? (
+                      <TouchableOpacity
+                        style={styles.useCustomBtn}
+                        onPress={() => selectSpec(specSearch.trim())}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={styles.useCustomBtnText}>Use "{specSearch.trim()}" as custom specialization</Text>
+                      </TouchableOpacity>
+                    ) : null
                   }
                   renderItem={({ item: spec }) => (
                     <TouchableOpacity
@@ -371,26 +501,6 @@ export default function DoctorStep1() {
           error={errors.consultationFee}
         />
 
-        {/* Tele-consultation toggle */}
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Tele-consultation available</Text>
-          <Switch
-            value={profile.teleConsultation}
-            onValueChange={(v) => updateProfile({ teleConsultation: v })}
-            trackColor={{ true: Colors.primary, false: Colors.border }}
-            thumbColor={Colors.white}
-          />
-        </View>
-        {profile.teleConsultation && (
-          <Input
-            label="Tele-consultation Fee (₹)"
-            value={profile.teleConsultationFee}
-            onChangeText={(v) => updateProfile({ teleConsultationFee: v.replace(/[^0-9]/g, '') })}
-            placeholder="e.g., 300"
-            keyboardType="numeric"
-          />
-        )}
-
         {/* Registration Number */}
         <Input
           label="Medical Registration Number *"
@@ -403,15 +513,44 @@ export default function DoctorStep1() {
           error={errors.registrationNumber}
         />
 
+        {/* Medical Registration Certificate (JPEG/PNG, <1MB) */}
+        <View style={styles.fieldBlock}>
+          <Text style={styles.fieldLabel}>
+            {t('medicalRegistrationCertificate') || 'Medical Registration Certificate'} *
+          </Text>
+          <DocumentUploadTile
+            type="REGISTRATION_CERTIFICATE"
+            fileName={profile.registrationCertificateFileName}
+            uri={profile.registrationCertificateUri}
+            required
+            uploadStatus={profile.registrationCertificateUploadStatus}
+            onPick={handlePickCertificate}
+            onRemove={handleRemoveCertificate}
+          />
+          <Text style={styles.fieldHint}>
+            {t('certificateFormatHint') || 'JPEG or PNG, less than 1 MB.'}
+          </Text>
+          {errors.registrationCertificate ? (
+            <Text style={styles.fieldError}>{errors.registrationCertificate}</Text>
+          ) : null}
+        </View>
+
         {/* Practice Started Year */}
-        <Input
-          label="Practice Started Year"
-          value={profile.practiceStartedYear}
-          onChangeText={(v) => updateProfile({ practiceStartedYear: v.replace(/[^0-9]/g, '') })}
-          placeholder="e.g., 2010"
-          keyboardType="numeric"
-          maxLength={4}
-        />
+        <View style={styles.fieldBlock}>
+          <Text style={styles.fieldLabel}>Practice Started Year</Text>
+          <View style={styles.fieldInputBox}>
+            <TextInput
+              style={styles.fieldInput}
+              value={String(profile.practiceStartedYear ?? '')}
+              onChangeText={(v) => updateProfile({ practiceStartedYear: v.replace(/[^0-9]/g, '').slice(0, 4) })}
+              placeholder="e.g., 2010"
+              placeholderTextColor={Colors.textLight}
+              keyboardType="number-pad"
+              maxLength={4}
+              returnKeyType="done"
+            />
+          </View>
+        </View>
 
         {/* Clinic Address */}
         <Input
@@ -450,7 +589,14 @@ export default function DoctorStep1() {
           title="Save & Continue"
           onPress={handleSaveAndContinue}
           loading={loading}
-          disabled={loading}
+          // Block the action while the cert is mid-upload or missing — the
+          // validate() call above shows the inline error, but disabling the
+          // button is a clearer affordance.
+          disabled={
+            loading ||
+            profile.registrationCertificateUploadStatus === 'uploading' ||
+            !profile.registrationCertificateKey
+          }
           style={styles.submitBtn}
         />
 
@@ -473,12 +619,13 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 20 },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8, marginTop: 8 },
   picker: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border,
     backgroundColor: Colors.white, marginBottom: 4,
   },
   pickerError: { borderColor: Colors.error },
-  pickerValue: { fontSize: 15, color: Colors.text, fontWeight: '600' },
-  pickerPlaceholder: { fontSize: 15, color: Colors.textLight },
+  pickerValue: { flex: 1, fontSize: 15, color: Colors.text, fontWeight: '600', marginRight: 8 },
+  pickerPlaceholder: { flex: 1, fontSize: 15, color: Colors.textLight, marginRight: 8 },
   errorText: { fontSize: 12, color: Colors.error, marginBottom: 8 },
   specGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   specChip: {
@@ -512,5 +659,122 @@ const styles = StyleSheet.create({
   avatarImage: { width: 80, height: 80, borderRadius: 40 },
   avatarLabel: { fontSize: 14, fontWeight: '700', color: Colors.text },
   avatarHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+
+  // Practice-Started-Year field — must match Input.tsx styling
+  fieldBlock: { marginBottom: 16 },
+  fieldLabel: { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 6 },
+  fieldInputBox: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border,
+    paddingHorizontal: 14,
+  },
+  fieldInput: { flex: 1, fontSize: 16, color: Colors.text, paddingVertical: 14 },
+  fieldHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
+  fieldError: { fontSize: 12, color: Colors.error, marginTop: 4 },
+
+  // Specialization picker modal
+  modalContainer: { flex: 1, backgroundColor: Colors.background },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
+  modalClose: { padding: 4 },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginVertical: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
+    backgroundColor: Colors.white,
+    borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border,
+  },
+  searchInput: { flex: 1, fontSize: 15, color: Colors.text, padding: 0 },
+  catRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+  },
+  catEmoji: { fontSize: 18 },
+  catLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: Colors.text },
+  catCount: {
+    fontSize: 12, fontWeight: '700', color: Colors.textSecondary,
+    backgroundColor: Colors.background,
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, overflow: 'hidden',
+  },
+  specRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 24, paddingVertical: 12,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+  },
+  specRowActive: { backgroundColor: Colors.primaryLight },
+  specRowText: { fontSize: 14, color: Colors.text, fontWeight: '500' },
+  specRowTextActive: { color: Colors.primary, fontWeight: '700' },
+  specRowCategory: { fontSize: 11, color: Colors.textLight, marginTop: 2 },
+  specRowCheck: {
+    width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary,
+  },
+  noResults: { textAlign: 'center', color: Colors.textSecondary, fontSize: 14, paddingTop: 24, paddingHorizontal: 24 },
+  noResultsContainer: { alignItems: 'center', paddingVertical: 8 },
+  useCustomBtn: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    alignItems: 'center',
+  },
+  useCustomBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '700', textAlign: 'center' },
+  otherSpecRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+  },
+  otherSpecEmoji: { fontSize: 16 },
+  otherSpecText: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
+  customInputBox: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 16,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  customInputLabel: { fontSize: 13, fontWeight: '700', color: Colors.text, marginBottom: 8 },
+  customInputField: {
+    fontSize: 15, color: Colors.text,
+    paddingHorizontal: 12, paddingVertical: 12,
+    backgroundColor: Colors.background,
+    borderRadius: 10, borderWidth: 1, borderColor: Colors.border,
+  },
+  customInputRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  customCancelBtn: {
+    flex: 1, paddingVertical: 11, borderRadius: 10,
+    backgroundColor: Colors.background, alignItems: 'center',
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  customCancelText: { fontSize: 14, color: Colors.text, fontWeight: '600' },
+  customSaveBtn: {
+    flex: 1, paddingVertical: 11, borderRadius: 10,
+    backgroundColor: Colors.primary, alignItems: 'center',
+  },
+  customSaveBtnDisabled: { opacity: 0.5 },
+  customSaveText: { fontSize: 14, color: Colors.white, fontWeight: '700' },
 });
 

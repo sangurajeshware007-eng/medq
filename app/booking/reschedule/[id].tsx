@@ -85,6 +85,7 @@ export default function RescheduleScreen() {
   const { data: slotsData, isLoading: slotsLoading } = useDoctorSlots(
     booking?.doctorId ?? '',
     selectedDateObj?.fullDate ?? '',
+    booking?.hospitalId,
     { enabled: !!booking?.doctorId },
   );
 
@@ -145,7 +146,7 @@ export default function RescheduleScreen() {
 
   if (step === 'success') {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.successContainer}>
           <PartyPopper size={64} color={Colors.trustGreen} strokeWidth={1.5} />
           <Text style={styles.successTitle}>Rescheduled!</Text>
@@ -185,7 +186,7 @@ export default function RescheduleScreen() {
 
   if (step === 'confirm') {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.navBar}>
           <TouchableOpacity onPress={() => setStep('select')} style={styles.backBtn}>
             <ChevronLeft size={22} color={Colors.text} strokeWidth={2.5} />
@@ -252,7 +253,7 @@ export default function RescheduleScreen() {
   // ── Select step ──────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ChevronLeft size={22} color={Colors.text} strokeWidth={2.5} />

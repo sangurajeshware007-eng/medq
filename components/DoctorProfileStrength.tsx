@@ -138,12 +138,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    width: '45%',
+    // Two-column grid that can shrink on narrow phones (iPhone 12 / SE).
+    // flexBasis 48% keeps two per row, flexGrow lets each cell expand to fill.
+    flexBasis: '48%',
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   criteriaText: {
     fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '700',
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,           // lets numberOfLines={1} truncate with … instead of clipping mid-word
   },
   criteriaIncomplete: {
     color: Colors.textLight,

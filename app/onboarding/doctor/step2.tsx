@@ -19,7 +19,7 @@ import Input from '../../../components/Input';
 import Button from '../../../components/Button';
 
 const SERVICES = [
-  'ECG', 'Echo', 'Angioplasty', 'Tele-consultation', 'Surgery',
+  'ECG', 'Echo', 'Angioplasty', 'Surgery',
   'X-Ray', 'MRI', 'Blood Test', 'Physiotherapy', 'Ultrasound',
 ];
 
@@ -90,7 +90,7 @@ export default function DoctorStep2() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>

@@ -1,5 +1,5 @@
 /**
- * 4-point spacing grid for MedReachPlus
+ * 4-point spacing grid for MedQ+
  *
  * All spacing values are multiples of 4.
  * Use these tokens instead of magic numbers.

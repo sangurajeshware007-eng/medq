@@ -187,6 +187,12 @@ const dashboardService = {
   getAppointmentsForDate: (date: string) =>
     api.get<DoctorDateAppointments>('/api/v1/doctor/dashboard/appointments', { params: { date } }),
 
+  /** Doctor flips their own booking to COMPLETED (consultation done) or NO_SHOW (patient absent). */
+  markAppointmentStatus: (bookingId: string, status: 'COMPLETED' | 'NO_SHOW') =>
+    api.patch<AppointmentSummary>(`/api/v1/doctor/dashboard/appointments/${bookingId}/status`, {
+      status,
+    }),
+
   // ── Hospital Manager ────────────────────────────────────────────────────
 
   getHospitalManagerDashboard: () =>
@@ -206,8 +212,12 @@ const dashboardService = {
   getAdminPending: async (): Promise<PendingOnboarding> => {
     type Paged<T> = { content: T[] };
     type Raw = {
-      pendingDoctors: Paged<PendingOnboarding['pendingDoctors'][number]> | PendingOnboarding['pendingDoctors'];
-      pendingHospitals: Paged<PendingOnboarding['pendingHospitals'][number]> | PendingOnboarding['pendingHospitals'];
+      pendingDoctors:
+        | Paged<PendingOnboarding['pendingDoctors'][number]>
+        | PendingOnboarding['pendingDoctors'];
+      pendingHospitals:
+        | Paged<PendingOnboarding['pendingHospitals'][number]>
+        | PendingOnboarding['pendingHospitals'];
     };
     const raw = await api.get<Raw>('/api/v1/admin/onboarding/pending', {
       params: { doctorsSize: 100, hospitalsSize: 100 },
@@ -242,7 +252,10 @@ const dashboardService = {
 
   // ── Active / Inactive toggle (post-approval operational control) ───────
   toggleDoctorStatus: (doctorId: string, isActive: boolean, reason?: string) =>
-    api.patch<{ message: string }>(`/api/v1/admin/doctors/${doctorId}/status`, { isActive, reason }),
+    api.patch<{ message: string }>(`/api/v1/admin/doctors/${doctorId}/status`, {
+      isActive,
+      reason,
+    }),
 
   toggleHospitalStatus: (hospitalId: string, isActive: boolean, reason?: string) =>
     api.patch<{ message: string }>(`/api/v1/admin/hospitals/${hospitalId}/status`, {

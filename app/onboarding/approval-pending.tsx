@@ -207,12 +207,6 @@ export default function ApprovalPendingScreen() {
                           label="Consultation Fee"
                           value={profileData.profile.consultationFee != null ? `₹${profileData.profile.consultationFee}` : '—'}
                         />
-                        {profileData.profile.teleConsultation && (
-                          <ReviewRow
-                            label="Tele-consult Fee"
-                            value={`₹${profileData.profile.teleConsultationFee ?? 0}`}
-                          />
-                        )}
                         {profileData.profile.gender ? (
                           <ReviewRow label="Gender" value={profileData.profile.gender} />
                         ) : null}

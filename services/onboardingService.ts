@@ -43,6 +43,8 @@ export interface DoctorProfilePayload {
   bio?: string;
   languages: string[];
   registrationNumber: string;
+  /** Private-bucket object key returned by the presign upload of the registration certificate. Required. */
+  registrationCertificateKey: string;
   practiceStartedYear?: number;
   avatarUrl?: string;
 }
@@ -67,11 +69,11 @@ export interface DoctorDetailsPayload {
 }
 
 export interface AvailabilityEntryPayload {
-  dayOfWeek: number;  // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  dayOfWeek: number; // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
   sessionName: string;
   sessionType: string;
-  startTime: string;   // "09:00"
-  endTime: string;     // "13:00"
+  startTime: string; // "09:00"
+  endTime: string; // "13:00"
   slotDurationMinutes: number;
   maxPatientsPerSlot: number;
 }
@@ -92,11 +94,11 @@ export interface DoctorHospitalsPayload {
 export interface AddressPayload {
   addressLine1: string;
   addressLine2?: string;
-  pincode: string;   // 6 digits
+  pincode: string; // 6 digits
   city: string;
   district?: string;
   state: string;
-  country: string;   // "India"
+  country: string; // "India"
 }
 
 export interface HospitalProfilePayload {
@@ -250,16 +252,13 @@ const onboardingService = {
     api.post<{ message: string }>(`${DOCTOR_BASE}/hospitals`, data),
 
   /** Submit doctor onboarding for review (Step 4) */
-  submitDoctorOnboarding: () =>
-    api.post<SubmitResponse>(`${DOCTOR_BASE}/submit`),
+  submitDoctorOnboarding: () => api.post<SubmitResponse>(`${DOCTOR_BASE}/submit`),
 
   /** Poll doctor onboarding status */
-  getDoctorStatus: () =>
-    api.get<OnboardingStatusResponse>(`${DOCTOR_BASE}/status`),
+  getDoctorStatus: () => api.get<OnboardingStatusResponse>(`${DOCTOR_BASE}/status`),
 
   /** Fetch all saved doctor onboarding data (for hydrating the form on return) */
-  getDoctorOnboarding: () =>
-    api.get<DoctorOnboardingResponse>(`${DOCTOR_BASE}/profile`),
+  getDoctorOnboarding: () => api.get<DoctorOnboardingResponse>(`${DOCTOR_BASE}/profile`),
 
   // ── Hospital Onboarding ────────────────────────────────────────────
 
@@ -272,22 +271,18 @@ const onboardingService = {
     api.post<{ message: string }>(`${HOSPITAL_BASE}/documents`, data),
 
   /** Submit hospital onboarding for review (Step 3) */
-  submitHospitalOnboarding: () =>
-    api.post<SubmitResponse>(`${HOSPITAL_BASE}/submit`),
+  submitHospitalOnboarding: () => api.post<SubmitResponse>(`${HOSPITAL_BASE}/submit`),
 
   /** Poll hospital onboarding status */
-  getHospitalStatus: () =>
-    api.get<OnboardingStatusResponse>(`${HOSPITAL_BASE}/status`),
+  getHospitalStatus: () => api.get<OnboardingStatusResponse>(`${HOSPITAL_BASE}/status`),
 
   /** Fetch all saved hospital onboarding data (for hydrating the form on return) */
-  getHospitalData: () =>
-    api.get<HospitalOnboardingData>(`${HOSPITAL_BASE}/data`),
+  getHospitalData: () => api.get<HospitalOnboardingData>(`${HOSPITAL_BASE}/data`),
 
   // ── Lightweight status summaries (used by Profile screen) ─────────────
 
   /** Doctor onboarding status — used on Profile screen to show context-aware CTA */
-  getDoctorOnboardingStatus: () =>
-    api.get<DoctorOnboardingStatusSummary>(`${DOCTOR_BASE}/status`),
+  getDoctorOnboardingStatus: () => api.get<DoctorOnboardingStatusSummary>(`${DOCTOR_BASE}/status`),
 
   /** Hospital onboarding status — used on Profile screen to show context-aware CTA */
   getHospitalOnboardingStatus: () =>
@@ -300,9 +295,7 @@ const onboardingService = {
    * Throws (404) when the pincode isn't in the master table — callers
    * should catch and fall back to manual entry.
    */
-  lookupPincode: (pincode: string) =>
-    api.get<PincodeLookupResult>(`/api/v1/pincode/${pincode}`),
+  lookupPincode: (pincode: string) => api.get<PincodeLookupResult>(`/api/v1/pincode/${pincode}`),
 };
 
 export default onboardingService;
-

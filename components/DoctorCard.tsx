@@ -6,6 +6,7 @@ import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
 import { Doctor } from '../utils/mockData';
 import { crossPlatformShadow } from '../utils/shadow';
+import LocalizedName from './LocalizedName';
 
 interface DoctorCardProps {
   doctor: Doctor;
@@ -27,7 +28,7 @@ export default function DoctorCard({ doctor, onPress, compact = false }: DoctorC
             </View>
           )}
         </View>
-        <Text style={styles.compactName} numberOfLines={1}>{doctor.name}</Text>
+        <LocalizedName name={doctor.name} style={styles.compactName} numberOfLines={1} />
         <Text style={styles.compactSpec} numberOfLines={1}>{t(doctor.specializationKey)}</Text>
         <View style={styles.compactRatingRow}>
           <Text style={styles.compactStar}>★</Text>
@@ -50,7 +51,7 @@ export default function DoctorCard({ doctor, onPress, compact = false }: DoctorC
       </View>
 
       <View style={styles.infoSection}>
-        <Text style={styles.name} numberOfLines={1}>{doctor.name}</Text>
+        <LocalizedName name={doctor.name} style={styles.name} numberOfLines={1} />
         <Text style={styles.specialization}>{t(doctor.specializationKey)}</Text>
 
         <View style={styles.statsRow}>

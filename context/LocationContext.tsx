@@ -37,22 +37,27 @@ const LocationContext = createContext<LocationContextType>({
 });
 
 export function LocationProvider({ children }: { children: ReactNode }) {
-  const [selectedLocation, setSelectedLocation] = useState<LocationItem | null>(null);
-  const [recentLocations, setRecentLocations] = useState<LocationItem[]>([]);
-  const [detecting, setDetecting] = useState(false);
-
-  // Load saved location on mount — use sync reads (MMKV)
-  React.useEffect(() => {
+  // Hydrate synchronously from MMKV in the initializer so consumers never see a
+  // null-then-restored value on remount (fixes a race where the home screen
+  // saw `selectedLocation = null` on the first render and auto-ran GPS detect,
+  // overwriting the user's chosen location).
+  const [selectedLocation, setSelectedLocation] = useState<LocationItem | null>(() => {
     try {
       const saved = storage.getSync(STORAGE_KEY);
-      if (saved) setSelectedLocation(JSON.parse(saved) as LocationItem);
-
-      const recent = storage.getSync(RECENT_KEY);
-      if (recent) setRecentLocations(JSON.parse(recent) as LocationItem[]);
+      return saved ? (JSON.parse(saved) as LocationItem) : null;
     } catch {
-      // ignore parse errors
+      return null;
     }
-  }, []);
+  });
+  const [recentLocations, setRecentLocations] = useState<LocationItem[]>(() => {
+    try {
+      const recent = storage.getSync(RECENT_KEY);
+      return recent ? (JSON.parse(recent) as LocationItem[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [detecting, setDetecting] = useState(false);
 
   const setLocation = useCallback((location: LocationItem) => {
     setSelectedLocation(location);

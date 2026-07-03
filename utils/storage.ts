@@ -7,7 +7,9 @@
  * API surface intentionally matches the old AsyncStorage-backed adapter so
  * all call sites keep working without changes.
  *
- * Graceful fallback to AsyncStorage built-in for Expo Go and Chrome remote debugging.
+ * Graceful fallback to AsyncStorage for Expo Go and Chrome remote debugging.
+ * In fallback mode, getSync reads from an in-memory map that is pre-seeded from
+ * AsyncStorage on startup — this preserves session across app restarts in dev.
  */
 import { MMKV } from 'react-native-mmkv';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,7 +20,26 @@ const memoryFallback = new Map<string, string>();
 try {
   mmkv = new MMKV({ id: 'medreachplus-storage' });
 } catch (e) {
-  console.warn('[storage] MMKV failed to initialize (likely due to remote debugger or Expo Go). Falling back to AsyncStorage.');
+  console.warn('[storage] MMKV failed to initialize (likely Expo Go). Falling back to AsyncStorage.');
+}
+
+/**
+ * Pre-seed memoryFallback from AsyncStorage so that getSync works across
+ * restarts in Expo Go / dev builds where MMKV is unavailable.
+ * Call once early in the app lifecycle (before auth restore).
+ */
+export async function initStorageFallback(): Promise<void> {
+  if (mmkv) return; // MMKV available — nothing to do
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    if (!keys || keys.length === 0) return;
+    const pairs = await AsyncStorage.multiGet(keys as string[]);
+    for (const [key, value] of pairs) {
+      if (value !== null) memoryFallback.set(key, value);
+    }
+  } catch (e) {
+    console.warn('[storage] initStorageFallback failed', e);
+  }
 }
 
 export interface StorageAdapter {

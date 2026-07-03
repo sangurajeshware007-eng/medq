@@ -1,3 +1,21 @@
+import { useRouter } from 'expo-router';
+import {
+  ClipboardList,
+  Hospital,
+  XCircle,
+  CalendarClock,
+  IndianRupee,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  History,
+  CalendarCheck,
+  AlertCircle,
+  UserX,
+  Star,
+  Pencil,
+} from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -9,17 +27,35 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/Colors';
-import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
-import { ClipboardList, Hospital, Radio, XCircle, CalendarClock, IndianRupee } from 'lucide-react-native';
-import Card from '../../components/Card';
+
 import Button from '../../components/Button';
-import { useUpcomingBookings, usePastBookings, useCancelBooking } from '../../hooks/useApiHooks';
-import { crossPlatformShadow } from '../../utils/shadow';
+import Card from '../../components/Card';
 import LogoHeader from '../../components/LogoHeader';
-import type { BookingListItem } from '../../services/bookingService';
+import RatingForm from '../../components/RatingForm';
+import { Colors } from '../../constants/Colors';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import {
+  useUpcomingBookings,
+  usePastBookings,
+  useCancelBooking,
+  useMyReviewForBooking,
+} from '../../hooks/useApiHooks';
+import { crossPlatformShadow } from '../../utils/shadow';
+
+/** Render "2026-05-08" → "Fri, 8 May" — easier to scan on a card */
+function formatBookingDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+/** Ensure the doctor name is prefixed with "Dr." once (idempotent) */
+function ensureDoctorPrefix(name: string): string {
+  if (!name) return '';
+  const trimmed = name.trim();
+  return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
+}
 
 export default function BookingScreen() {
   const { t } = useLanguage();
@@ -28,30 +64,30 @@ export default function BookingScreen() {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [upcomingPage, setUpcomingPage] = useState(0);
   const [pastPage, setPastPage] = useState(0);
+  // Holds the booking being rated/edited so the modal can show its context (doctor name etc.).
+  const [ratingTarget, setRatingTarget] = useState<{
+    bookingId: string;
+    doctorName: string;
+    reviewId?: string | null;
+  } | null>(null);
 
-   // ─── Fetch upcoming bookings ─────────────────────────────────────────
-   const {
-     data: upcomingBookings,
-     isLoading: upcomingLoading,
-     error: upcomingError,
-   } = useUpcomingBookings();
+  // ─── Fetch upcoming bookings ─────────────────────────────────────────
+  const {
+    data: upcomingBookings,
+    isLoading: upcomingLoading,
+    error: upcomingError,
+  } = useUpcomingBookings();
 
-   // ─── Fetch past bookings ────────────────────────────────────────────
-   const {
-     data: pastBookings,
-     isLoading: pastLoading,
-     error: pastError,
-   } = usePastBookings();
+  // ─── Fetch past bookings ────────────────────────────────────────────
+  const { data: pastBookings, isLoading: pastLoading, error: pastError } = usePastBookings();
 
-   const cancelBooking = useCancelBooking();
+  const cancelBooking = useCancelBooking();
 
-   // ─── Derived state ──────────────────────────────────────────────────
-   const isUpcoming = activeTab === 'upcoming';
-   const bookings = isUpcoming
-     ? upcomingBookings ?? []
-     : pastBookings ?? [];
-   const isLoading = isUpcoming ? upcomingLoading : pastLoading;
-   const error = isUpcoming ? upcomingError : pastError;
+  // ─── Derived state ──────────────────────────────────────────────────
+  const isUpcoming = activeTab === 'upcoming';
+  const bookings = isUpcoming ? (upcomingBookings ?? []) : (pastBookings ?? []);
+  const isLoading = isUpcoming ? upcomingLoading : pastLoading;
+  const error = isUpcoming ? upcomingError : pastError;
 
   // ─── Error handling ─────────────────────────────────────────────────
   const handleError = useCallback(
@@ -79,27 +115,38 @@ export default function BookingScreen() {
   };
 
   // ─── Status helpers ─────────────────────────────────────────────────
-  type BookingStatus = BookingListItem['status'];
-
-  const getStatusColor = (status: BookingStatus) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return Colors.trustGreen;
-      case 'COMPLETED':
-        return Colors.primary;
-      case 'CANCELLED':
-        return Colors.error;
-    }
+  // Past-date CONFIRMED bookings haven't been transitioned by the backend yet,
+  // so we present them as "Pending" — a confirmed appointment whose outcome
+  // (consulted / no-show) is awaiting status update — rather than mis-labeling
+  // them as still-Confirmed.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const resolveDisplayStatus = (status: string, bookingDate: string): string => {
+    if (status === 'CONFIRMED' && bookingDate < todayIso) return 'PENDING';
+    return status;
   };
 
-  const getStatusText = (status: BookingStatus) => {
+  const statusStyle = (status: string): { color: string; label: string; Icon: LucideIcon } => {
     switch (status) {
       case 'CONFIRMED':
-        return t('confirmed');
+        return {
+          color: Colors.trustGreen,
+          label: t('confirmed') || 'Confirmed',
+          Icon: CheckCircle2,
+        };
       case 'COMPLETED':
-        return t('completed');
+        return { color: Colors.primary, label: t('consulted') || 'Consulted', Icon: CheckCircle2 };
       case 'CANCELLED':
-        return t('cancelled');
+        return { color: Colors.error, label: t('cancelled') || 'Cancelled', Icon: XCircle };
+      case 'PENDING':
+        return { color: Colors.gold, label: t('pending') || 'Pending', Icon: AlertCircle };
+      case 'NO_SHOW':
+        return {
+          color: Colors.error,
+          label: t('patientDidNotVisit') || 'Patient did not visit',
+          Icon: UserX,
+        };
+      default:
+        return { color: Colors.textSecondary, label: status, Icon: AlertCircle };
     }
   };
 
@@ -138,33 +185,33 @@ export default function BookingScreen() {
         </View>
       </View>
 
-      {/* Tabs */}
+      {/* Tabs — icon + short label, centered, soft shadow on the active pill */}
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
           onPress={() => switchTab('upcoming')}
+          activeOpacity={0.85}
         >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'upcoming' && styles.tabTextActive,
-            ]}
-          >
-            {t('upcomingBookings')}
+          <CalendarCheck
+            size={16}
+            color={activeTab === 'upcoming' ? Colors.primary : Colors.textSecondary}
+            strokeWidth={2.5}
+          />
+          <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
+            Upcoming
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'past' && styles.tabActive]}
           onPress={() => switchTab('past')}
+          activeOpacity={0.85}
         >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'past' && styles.tabTextActive,
-            ]}
-          >
-            {t('pastBookings')}
-          </Text>
+          <History
+            size={16}
+            color={activeTab === 'past' ? Colors.primary : Colors.textSecondary}
+            strokeWidth={2.5}
+          />
+          <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>Past</Text>
         </TouchableOpacity>
       </View>
 
@@ -204,36 +251,47 @@ export default function BookingScreen() {
                 activeOpacity={0.7}
                 onPress={() =>
                   router.push({
-                    pathname: '/token/[id]',
-                    params: { id: booking.doctorId },
+                    pathname: '/booking/view/[id]',
+                    params: { id: booking.id },
                   })
                 }
               >
                 <Card style={styles.bookingCard}>
+                  {/* Brand accent stripe on the left edge */}
+                  <View style={styles.cardAccent} />
+
+                  {/* Top — date + time stacked left, status pill right.
+                      Stacking keeps everything legible on iPhone 12 / SE without overlap. */}
                   <View style={styles.bookingHeader}>
-                    <View style={styles.dateContainer}>
-                      <Text style={styles.dateText}>
-                        {booking.bookingDate}
-                      </Text>
-                             <Text style={styles.timeText}>{booking.slotStart} - {booking.slotEnd}</Text>
+                    <View style={styles.headerLeft}>
+                      <View style={styles.dateLine}>
+                        <Calendar size={12} color={Colors.primary} strokeWidth={2.5} />
+                        <Text style={styles.dateText} numberOfLines={1}>
+                          {formatBookingDate(booking.bookingDate)}
+                        </Text>
+                      </View>
+                      <View style={styles.timeLine}>
+                        <Clock size={11} color={Colors.textSecondary} strokeWidth={2.5} />
+                        <Text style={styles.timeText} numberOfLines={1}>
+                          {booking.slotStart} – {booking.slotEnd}
+                        </Text>
+                      </View>
                     </View>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: getStatusColor(booking.status) + '20' },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusText,
-                          { color: getStatusColor(booking.status) },
-                        ]}
-                      >
-                        {getStatusText(booking.status)}
-                      </Text>
-                    </View>
+                    {(() => {
+                      const display = resolveDisplayStatus(booking.status, booking.bookingDate);
+                      const { color, label, Icon } = statusStyle(display);
+                      return (
+                        <View style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
+                          <Icon size={11} color={color} strokeWidth={2.5} />
+                          <Text style={[styles.statusText, { color }]} numberOfLines={1}>
+                            {label}
+                          </Text>
+                        </View>
+                      );
+                    })()}
                   </View>
 
+                  {/* Doctor block */}
                   <View style={styles.bookingBody}>
                     <View style={styles.doctorAvatarPlaceholder}>
                       <Text style={styles.doctorAvatarText}>
@@ -241,46 +299,44 @@ export default function BookingScreen() {
                       </Text>
                     </View>
                     <View style={styles.doctorInfo}>
-                      <Text style={styles.doctorName}>{booking.doctorName}</Text>
-                      <Text style={styles.specialization}>{booking.specialization}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Hospital size={12} color={Colors.textSecondary} strokeWidth={2} />
-                        <Text style={styles.hospitalName}>{booking.hospitalName}</Text>
+                      <Text style={styles.doctorName} numberOfLines={1}>
+                        {ensureDoctorPrefix(booking.doctorName)}
+                      </Text>
+                      <Text style={styles.specialization} numberOfLines={1}>
+                        {booking.specialization}
+                      </Text>
+                      <View style={styles.hospitalRow}>
+                        <Hospital size={11} color={Colors.textSecondary} strokeWidth={2} />
+                        <Text style={styles.hospitalName} numberOfLines={1}>
+                          {booking.hospitalName}
+                        </Text>
                       </View>
                     </View>
                   </View>
 
+                  {/* Booking-ref + fee block — ref displayed prominently for support / lookup */}
                   <View style={styles.tokenRow}>
-                    <View style={styles.tokenInfo}>
-                      <Text style={styles.tokenLabel}>{t('yourToken')}</Text>
-                      <Text style={styles.tokenValue}>#{booking.tokenNumber}</Text>
+                    <View style={styles.refBlock}>
+                      <Text style={styles.refLabel}>BOOKING REFERENCE</Text>
+                      <Text style={styles.refValue} numberOfLines={1} selectable>
+                        {booking.bookingRef}
+                      </Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <IndianRupee size={14} color={Colors.primary} strokeWidth={2.5} />
-                      <Text style={styles.amountText}>{booking.amount.toFixed(2)}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.trackButton}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/token/[id]',
-                          params: { id: booking.doctorId },
-                        })
-                      }
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Radio size={12} color={Colors.white} strokeWidth={2.5} />
-                        <Text style={styles.trackButtonText}>{t('trackToken')}</Text>
+                    <View style={styles.feeBlock}>
+                      <Text style={styles.feeLabel}>FEE</Text>
+                      <View style={styles.feeAmountRow}>
+                        <IndianRupee size={14} color={Colors.text} strokeWidth={2.5} />
+                        <Text style={styles.feeAmount}>{booking.amount.toFixed(0)}</Text>
                       </View>
-                    </TouchableOpacity>
+                    </View>
                   </View>
 
-                  {/* Cancel / Reschedule — shown only when API says so */}
+                  {/* Cancel / Reschedule */}
                   {(booking.canCancel || booking.canReschedule) && (
                     <View style={styles.actionRow}>
                       {booking.canReschedule && (
                         <Button
-                          title={t('reschedule') || 'Reschedule'}
+                          title="Reschedule"
                           variant="outline"
                           size="small"
                           icon={<CalendarClock size={14} color={Colors.primary} strokeWidth={2} />}
@@ -295,29 +351,112 @@ export default function BookingScreen() {
                       )}
                       {booking.canCancel && (
                         <Button
-                          title={t('cancel') || 'Cancel'}
+                          title="Cancel"
                           variant="danger"
                           size="small"
                           icon={<XCircle size={14} color={Colors.white} strokeWidth={2} />}
                           onPress={() => handleCancel(booking.id)}
-                          loading={cancelBooking.isPending && cancelBooking.variables === booking.id}
+                          loading={
+                            cancelBooking.isPending && cancelBooking.variables === booking.id
+                          }
                           style={styles.actionBtn}
                         />
                       )}
                     </View>
                   )}
+
+                  {/* Rate-your-visit CTA — only on COMPLETED bookings. */}
+                  {booking.status === 'COMPLETED' &&
+                    (!booking.reviewId ? (
+                      <Button
+                        title={t('rateYourVisit') || 'Rate your visit'}
+                        variant="primary"
+                        size="small"
+                        icon={<Star size={14} color={Colors.white} strokeWidth={2.5} />}
+                        onPress={() =>
+                          setRatingTarget({
+                            bookingId: booking.id,
+                            doctorName: ensureDoctorPrefix(booking.doctorName),
+                            reviewId: null,
+                          })
+                        }
+                        style={styles.actionBtn}
+                      />
+                    ) : (
+                      <RatedRow
+                        bookingId={booking.id}
+                        reviewId={booking.reviewId}
+                        doctorName={ensureDoctorPrefix(booking.doctorName)}
+                        onEdit={(args) => setRatingTarget(args)}
+                      />
+                    ))}
                 </Card>
               </TouchableOpacity>
             ))}
 
-             {/* No pagination needed for flat array DTO */}
+            {/* No pagination needed for flat array DTO */}
           </>
         )}
       </ScrollView>
+      {ratingTarget && (
+        <RatingForm
+          visible
+          bookingId={ratingTarget.bookingId}
+          doctorName={ratingTarget.doctorName}
+          reviewId={ratingTarget.reviewId ?? null}
+          onClose={() => setRatingTarget(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
+/**
+ * Inline display for a booking the patient has already rated. Shows the star
+ * value the patient gave (fetched fresh — keeps the row in sync after edits)
+ * and a pencil affordance to re-open the form.
+ */
+function RatedRow({
+  bookingId,
+  reviewId,
+  doctorName,
+  onEdit,
+}: {
+  bookingId: string;
+  reviewId: string;
+  doctorName: string;
+  onEdit: (args: { bookingId: string; doctorName: string; reviewId: string }) => void;
+}) {
+  const { t } = useLanguage();
+  const { data: review } = useMyReviewForBooking(bookingId);
+  const stars = review?.rating ?? 0;
+  return (
+    <View style={styles.ratedRow}>
+      <View style={styles.ratedStars}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <Star
+            key={n}
+            size={14}
+            color={n <= stars ? Colors.gold : Colors.textSecondary}
+            fill={n <= stars ? Colors.gold : 'transparent'}
+            strokeWidth={2}
+          />
+        ))}
+        <Text style={styles.ratedLabel}>{t('youRated') || 'You rated'}</Text>
+      </View>
+      <TouchableOpacity
+        onPress={() => onEdit({ bookingId, doctorName, reviewId })}
+        hitSlop={6}
+        accessibilityLabel={t('editRating') || 'Edit rating'}
+      >
+        <View style={styles.ratedEdit}>
+          <Pencil size={12} color={Colors.primary} strokeWidth={2} />
+          <Text style={styles.ratedEditText}>{t('edit') || 'Edit'}</Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -330,7 +469,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    ...crossPlatformShadow({ color: Colors.shadow, offsetY: 2, opacity: 1, radius: 8, elevation: 3 }),
+    ...crossPlatformShadow({
+      color: Colors.shadow,
+      offsetY: 2,
+      opacity: 1,
+      radius: 8,
+      elevation: 3,
+    }),
   },
   headerTitle: {
     fontSize: 22,
@@ -341,28 +486,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 16,
     marginTop: 16,
-    backgroundColor: Colors.borderLight,
-    borderRadius: 14,
-    padding: 4,
+    backgroundColor: Colors.background,
+    borderRadius: 16,
+    padding: 5,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...crossPlatformShadow({
+      color: Colors.shadow,
+      offsetY: 2,
+      opacity: 0.6,
+      radius: 8,
+      elevation: 2,
+    }),
   },
   tab: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     paddingVertical: 10,
     borderRadius: 12,
-    alignItems: 'center',
   },
   tabActive: {
     backgroundColor: Colors.white,
-    ...crossPlatformShadow({ color: Colors.shadow, offsetY: 2, opacity: 1, radius: 4, elevation: 2 }),
+    ...crossPlatformShadow({
+      color: Colors.primary,
+      offsetY: 3,
+      opacity: 0.18,
+      radius: 8,
+      elevation: 4,
+    }),
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: Colors.textSecondary,
+    letterSpacing: 0.3,
   },
   tabTextActive: {
     color: Colors.primary,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   list: {
     flex: 1,
@@ -372,39 +536,68 @@ const styles = StyleSheet.create({
   },
   bookingCard: {
     marginBottom: 14,
+    paddingLeft: 18, // make room for the accent stripe
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cardAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: Colors.primary,
   },
   bookingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start', // align to top — left col stacks vertically
     marginBottom: 12,
     paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
+    gap: 10,
   },
-  dateContainer: {
+  headerLeft: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  dateLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 5,
+  },
+  timeLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.text,
+    letterSpacing: 0.2,
   },
   timeText: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusText: {
     fontSize: 12,
     fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   bookingBody: {
     flexDirection: 'row',
@@ -429,62 +622,88 @@ const styles = StyleSheet.create({
   },
   doctorInfo: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   doctorName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.text,
   },
   specialization: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.primary,
-    fontWeight: '600',
-    marginTop: 1,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+  hospitalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
   },
   hospitalName: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 2,
+    fontWeight: '600',
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
+  // ── Booking ref + fee block (replaces the old token + track-live design) ─
   tokenRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     backgroundColor: Colors.primaryLight,
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  tokenInfo: {
+  refBlock: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  refLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: 0.6,
+    marginBottom: 3,
+  },
+  refValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: Colors.text,
+    letterSpacing: 0.5,
+    fontVariant: ['tabular-nums'],
+  },
+  feeBlock: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+    paddingLeft: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.primary + '30',
+  },
+  feeLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: 0.6,
+    marginBottom: 3,
+  },
+  feeAmountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  tokenLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  tokenValue: {
-    fontSize: 20,
+  feeAmount: {
+    fontSize: 17,
     fontWeight: '900',
-    color: Colors.primary,
-  },
-  amountText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  trackButton: {
-    backgroundColor: Colors.white,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
-  },
-  trackButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
+    color: Colors.text,
+    fontVariant: ['tabular-nums'],
   },
   actionRow: {
     flexDirection: 'row',
@@ -498,6 +717,32 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
+  },
+  ratedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  ratedStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  ratedLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginLeft: 6,
+  },
+  ratedEdit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratedEditText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
@@ -529,4 +774,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
 });
-

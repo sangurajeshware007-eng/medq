@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useCallback, useMemo, useEffect, type ReactNode } from 'react';
 import { Alert } from 'react-native';
 
-import authService, { AuthError, extractErrorCode } from '../services/authService';
-import type { AuthUser, SignupRequest, UpdateProfileRequest } from '../services/authService';
+import authService, { AuthError } from '../services/authService';
+import type { AuthUser, CompleteProfileRequest, UpdateProfileRequest } from '../services/authService';
 import { TokenManager } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { initStorageFallback } from '../utils/storage';
 
-// ─── Helper ───────────────────────────────────────────────────────────────
+// ─── Helper ────────────────────────────────────────────────────────────────────
 function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof AuthError) {
     if (err.status === 423 && err.retryAfterSeconds) {
@@ -15,23 +16,31 @@ function getErrorMessage(err: unknown, fallback: string): string {
     return err.message;
   }
   if (err instanceof Error) return err.message;
-  if (typeof err === 'object' && err !== null && 'message' in err) {
-    return String((err as { message: unknown }).message);
-  }
   return fallback;
 }
 
-// ─── Context type ─────────────────────────────────────────────────────────
+// ─── Context type ──────────────────────────────────────────────────────────────
 interface AuthContextType {
   isLoggedIn: boolean;
   user: AuthUser | null;
   loading: boolean;
   initializing: boolean;
-  signup: (data: SignupRequest) => Promise<boolean>;
-  login: (phone: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  pendingPhone: string | null;
+  pendingIsTestMode: boolean;
+
+  // OTP flow (primary)
+  sendOtp: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  verifyOtp: (otp: string) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>;
+  completeProfile: (data: CompleteProfileRequest) => Promise<boolean>;
+
+  // Shared
   logout: () => Promise<void>;
   updateProfile: (data: UpdateProfileRequest) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
+
+  // Legacy (kept for admin screens)
+  signup: (data: { name: string; phone: string; password: string; email?: string }) => Promise<boolean>;
+  login: (phone: string, password: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -39,23 +48,34 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: false,
   initializing: true,
-  signup: async () => false,
-  login: async () => ({ success: false }),
+  pendingPhone: null,
+  pendingIsTestMode: false,
+  sendOtp: async () => ({ success: false }),
+  verifyOtp: async () => ({ success: false }),
+  completeProfile: async () => false,
   logout: async () => {},
   updateProfile: async () => false,
   refreshProfile: async () => {},
+  signup: async () => false,
+  login: async () => ({ success: false }),
 });
 
-// ─── Provider ─────────────────────────────────────────────────────────────
+// ─── Provider ──────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
-  // Read/write Zustand store — no local useState needed
-  const { isLoggedIn, user, loading, initializing, setUser, clearUser, setLoading, setInitializing } =
-    useAuthStore();
+  const {
+    isLoggedIn, user, loading, initializing,
+    pendingPhone, pendingIsTestMode,
+    setUser, clearUser, setLoading, setInitializing,
+    setPendingOtp, clearPendingOtp,
+  } = useAuthStore();
 
-  // ── Restore session on mount ──────────────────────────────────────
+  // ── Session restore on app launch ─────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
+        // Pre-seed in-memory fallback from AsyncStorage before the sync read below.
+        // Required in Expo Go / dev builds where MMKV is unavailable.
+        await initStorageFallback();
         const refreshToken = await TokenManager.getRefreshToken();
         if (!refreshToken) return;
         await authService.refreshToken();
@@ -76,18 +96,69 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     })();
   }, [setUser, setInitializing]);
 
-  // ── Signup ────────────────────────────────────────────────────────
-  const signup = useCallback(
-    async (data: SignupRequest): Promise<boolean> => {
+  // ── OTP flow ───────────────────────────────────────────────────────────────
+
+  const sendOtp = useCallback(
+    async (phone: string): Promise<{ success: boolean; error?: string }> => {
       setLoading(true);
       try {
-        const response = await authService.signup(data);
-        setUser(response.user);
+        const response = await authService.sendOtp(phone);
+        setPendingOtp(phone, response.sessionId, response.isTestMode);
+        return { success: true };
+      } catch (err: unknown) {
+        return { success: false, error: getErrorMessage(err, 'Unable to send OTP. Please try again.') };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setPendingOtp],
+  );
+
+  const verifyOtp = useCallback(
+    async (otp: string): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
+      const { pendingPhone: phone, pendingSessionId: sessionId } = useAuthStore.getState();
+      if (!phone) return { success: false, error: 'Session expired. Please re-enter your phone number.' };
+
+      setLoading(true);
+      try {
+        const response = await authService.verifyOtp(phone, otp, sessionId ?? undefined);
+        clearPendingOtp();
+
+        if (!response.isNewUser) {
+          // Returning user — set auth state immediately; layout redirects to tabs
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          setUser(response.user);
+        }
+        // New user: tokens stored in TokenManager; caller navigates to complete-profile
+
+        return { success: true, isNewUser: response.isNewUser };
+      } catch (err: unknown) {
+        const msg = getErrorMessage(err, 'Invalid OTP. Please try again.');
+        return { success: false, error: msg };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, clearPendingOtp, setUser],
+  );
+
+  const completeProfile = useCallback(
+    async (data: CompleteProfileRequest): Promise<boolean> => {
+      setLoading(true);
+      try {
+        const updated = await authService.completeProfile(data);
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        setUser({
+          id: updated.id,
+          name: updated.name,
+          phone: updated.phone,
+          email: updated.email,
+          role: updated.role,
+          preferredLanguage: updated.preferredLanguage,
+        });
         return true;
       } catch (err: unknown) {
-        const status = err instanceof AuthError ? err.status : 0;
-        const title = status === 409 ? 'Phone Already Registered' : 'Signup Failed';
-        Alert.alert(title, getErrorMessage(err, 'Unable to create account. Please try again.'));
+        Alert.alert('Profile Error', getErrorMessage(err, 'Unable to save profile. Please try again.'));
         return false;
       } finally {
         setLoading(false);
@@ -96,34 +167,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     [setLoading, setUser],
   );
 
-  // ── Login ─────────────────────────────────────────────────────────
-  const login = useCallback(
-    async (phone: string, password: string): Promise<{ success: boolean; error?: string }> => {
-      setLoading(true);
-      try {
-        const response = await authService.login({ phone, password });
-        setUser(response.user);
-        return { success: true };
-      } catch (err: unknown) {
-        const status = err instanceof AuthError ? err.status : 0;
-        let errorMsg = getErrorMessage(err, 'Invalid phone number or password.');
-        if (status === 423) errorMsg = getErrorMessage(err, 'Too many attempts. Please try again later.');
-        else if (status === 401) errorMsg = 'Invalid phone number or password. Please try again.';
-        return { success: false, error: errorMsg };
-      } finally {
-        setLoading(false);
-      }
-    },
-    [setLoading, setUser],
-  );
+  // ── Shared ─────────────────────────────────────────────────────────────────
 
-  // ── Logout ────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     await authService.logout();
     clearUser();
   }, [clearUser]);
 
-  // ── Update Profile ────────────────────────────────────────────────
   const updateProfile = useCallback(
     async (data: UpdateProfileRequest): Promise<boolean> => {
       setLoading(true);
@@ -148,7 +198,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     [setLoading, setUser],
   );
 
-  // ── Refresh Profile ───────────────────────────────────────────────
   const refreshProfile = useCallback(async () => {
     try {
       const profile = await authService.getProfile();
@@ -165,9 +214,65 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, [setUser]);
 
+  // ── Legacy (password-based) ────────────────────────────────────────────────
+
+  const signup = useCallback(
+    async (data: { name: string; phone: string; password: string; email?: string }): Promise<boolean> => {
+      setLoading(true);
+      try {
+        const response = await authService.signup(data);
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        setUser(response.user);
+        return true;
+      } catch (err: unknown) {
+        const status = err instanceof AuthError ? err.status : 0;
+        const title = status === 409 ? 'Phone Already Registered' : 'Signup Failed';
+        Alert.alert(title, getErrorMessage(err, 'Unable to create account.'));
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setUser],
+  );
+
+  const login = useCallback(
+    async (phone: string, password: string): Promise<{ success: boolean; error?: string }> => {
+      setLoading(true);
+      try {
+        const response = await authService.login({ phone, password });
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        setUser(response.user);
+        return { success: true };
+      } catch (err: unknown) {
+        const status = err instanceof AuthError ? err.status : 0;
+        const msg =
+          status === 423
+            ? getErrorMessage(err, 'Too many attempts. Please try again later.')
+            : 'Invalid phone number or password.';
+        return { success: false, error: msg };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setUser],
+  );
+
   const value = useMemo(
-    () => ({ isLoggedIn, user, loading, initializing, signup, login, logout, updateProfile, refreshProfile }),
-    [isLoggedIn, user, loading, initializing, signup, login, logout, updateProfile, refreshProfile],
+    () => ({
+      isLoggedIn, user, loading, initializing,
+      pendingPhone, pendingIsTestMode,
+      sendOtp, verifyOtp, completeProfile,
+      logout, updateProfile, refreshProfile,
+      signup, login,
+    }),
+    [
+      isLoggedIn, user, loading, initializing,
+      pendingPhone, pendingIsTestMode,
+      sendOtp, verifyOtp, completeProfile,
+      logout, updateProfile, refreshProfile,
+      signup, login,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

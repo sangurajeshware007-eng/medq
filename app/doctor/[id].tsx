@@ -11,6 +11,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import LocalizedName from '../../components/LocalizedName';
 import {
   ChevronLeft,
   Shield,
@@ -48,6 +49,29 @@ export default function DoctorProfileScreen() {
   const { data: reviews, isLoading: reviewsLoading } = useReviews(id || '1');
 
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string | undefined>(undefined);
+
+  // Initialize selected hospital once doctor loads. Prefer the primary affiliation;
+  // fall back to the first listed hospital, then to legacy doctor.hospital.id.
+  React.useEffect(() => {
+    if (!doctor) return;
+    if (selectedHospitalId) return;
+    const primary = doctor.hospitals?.find((h) => h.isPrimary);
+    const fallback = primary?.hospitalId
+      ?? doctor.hospitals?.[0]?.hospitalId
+      ?? doctor.hospital?.id;
+    if (fallback) setSelectedHospitalId(fallback);
+  }, [doctor, selectedHospitalId]);
+
+  const selectedHospital = useMemo(() => {
+    if (!doctor) return null;
+    if (doctor.hospitals?.length) {
+      return doctor.hospitals.find((h) => h.hospitalId === selectedHospitalId) ?? doctor.hospitals[0];
+    }
+    return null;
+  }, [doctor, selectedHospitalId]);
+
+  const hasMultipleHospitals = (doctor?.hospitals?.length ?? 0) > 1;
 
   if (doctorLoading) {
     return (
@@ -77,7 +101,7 @@ export default function DoctorProfileScreen() {
   const displayedAbout = isAboutExpanded ? aboutText : aboutText.slice(0, 150) + (shouldShowReadMore ? '...' : '');
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -87,21 +111,11 @@ export default function DoctorProfileScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Profile Strength */}
-        <View style={styles.sectionMargin}>
-          <DoctorProfileStrength
-            photo={!!doctor.photo || !!doctor.avatarUrl}
-            education={!!(doctor.qualifications && doctor.qualifications.length > 0) || !!(doctor.education && doctor.education.length > 0)}
-            specialization={!!doctor.specialization}
-            experience={(doctor.experienceYears || doctor.experience) > 0}
-          />
-        </View>
-
-        {/* HERO SECTION */}
+        {/* HERO SECTION — leads with the doctor's identity, not the meta widget */}
         <View style={styles.sectionMargin}>
            <HeroSection doctor={doctor} />
         </View>
@@ -177,7 +191,9 @@ export default function DoctorProfileScreen() {
             <Stethoscope size={20} color={Colors.primary} />
             <Text style={styles.sectionTitle}>Which patients we see</Text>
           </View>
-          <Text style={styles.sectionDesc}>Common conditions and cases treated by {doctor.name}:</Text>
+          <Text style={styles.sectionDesc}>
+            Common conditions and cases treated by <LocalizedName name={doctor.name} />:
+          </Text>
           <View style={styles.tagsGrid}>
             {(doctor.conditions || doctor.diseases || []).map((d: any, i: number) => (
               <View key={i} style={styles.tag}>
@@ -237,17 +253,124 @@ export default function DoctorProfileScreen() {
         <Card style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <HospitalIcon size={20} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Clinic Details</Text>
+            <Text style={styles.sectionTitle}>
+              {hasMultipleHospitals ? 'Hospitals' : 'Clinic Details'}
+            </Text>
           </View>
+
+          {hasMultipleHospitals && (
+            <View style={styles.hospitalChipsRow}>
+              {doctor.hospitals.map((h) => {
+                const isActive = h.hospitalId === selectedHospitalId;
+                return (
+                  <TouchableOpacity
+                    key={h.hospitalId}
+                    style={[styles.hospitalChip, isActive && styles.hospitalChipActive]}
+                    onPress={() => setSelectedHospitalId(h.hospitalId)}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[styles.hospitalChipText, isActive && styles.hospitalChipTextActive]}
+                      numberOfLines={1}
+                    >
+                      {h.hospitalName}
+                    </Text>
+                    {h.isPrimary && (
+                      <Text style={[styles.hospitalChipBadge, isActive && styles.hospitalChipBadgeActive]}>
+                        PRIMARY
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
           <View style={styles.clinicBox}>
-             <Text style={styles.clinicName}>{doctor.hospital?.name || (doctor.hospitals && doctor.hospitals[0]?.hospitalName)}</Text>
-             <Text style={styles.clinicAddress}>{doctor.clinicAddress || doctor.hospital?.address}</Text>
-             <View style={styles.feeBadge}>
-                <Text style={styles.feeLabel}>In-Clinic Consultation Fee:</Text>
-                <Text style={styles.feeValue}>₹{doctor.consultationFee || doctor.fee}</Text>
-             </View>
+            <LocalizedName
+              name={
+                selectedHospital?.hospitalName
+                || doctor.hospital?.name
+                || (doctor.hospitals && doctor.hospitals[0]?.hospitalName)
+                || ''
+              }
+              style={styles.clinicName}
+            />
+            <Text style={styles.clinicAddress}>
+              {selectedHospital?.address || doctor.clinicAddress || doctor.hospital?.address}
+            </Text>
+            <View style={styles.feeBadge}>
+              <Text style={styles.feeLabel}>In-Clinic Consultation Fee:</Text>
+              <Text style={styles.feeValue}>
+                ₹{selectedHospital?.consultationFee ?? doctor.consultationFee ?? doctor.fee}
+              </Text>
+            </View>
           </View>
         </Card>
+
+        {/* REVIEWS & RATINGS */}
+        {(doctor.totalReviews ?? 0) > 0 && (
+          <Card style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Star size={20} color={Colors.gold} fill={Colors.gold} />
+              <Text style={styles.sectionTitle}>{t('reviewsAndRatings') || 'Reviews & Ratings'}</Text>
+              <Text style={styles.reviewsAggregate}>
+                ★ {(doctor.rating ?? 0).toFixed(1)} · {doctor.totalReviews} {t('reviewsCountSuffix') || 'reviews'}
+              </Text>
+            </View>
+            {reviewsLoading ? (
+              <ActivityIndicator color={Colors.primary} />
+            ) : (
+              <>
+                {(reviews ?? []).slice(0, 5).map((r) => (
+                  <View key={r.id} style={styles.reviewItem}>
+                    <View style={styles.reviewItemHeader}>
+                      <Text style={styles.reviewerName}>{r.userName}</Text>
+                      <View style={styles.reviewStars}>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            size={12}
+                            color={n <= r.rating ? Colors.gold : Colors.textSecondary}
+                            fill={n <= r.rating ? Colors.gold : 'transparent'}
+                            strokeWidth={2}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                    {r.comment ? (
+                      <Text style={styles.reviewComment} numberOfLines={4}>
+                        {r.comment}
+                      </Text>
+                    ) : null}
+                  </View>
+                ))}
+                {(doctor.totalReviews ?? 0) > (reviews?.length ?? 0) && (
+                  <TouchableOpacity
+                    onPress={() => router.push({ pathname: '/doctor/[id]/reviews', params: { id: id ?? '' } })}
+                    style={styles.seeAllReviews}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.seeAllReviewsText}>
+                      {t('seeAllReviews') || 'See all reviews'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </Card>
+        )}
+
+        {/* Profile Strength — moved to the bottom so it doesn't compete with
+            primary booking content (doctor identity, qualifications, fee). */}
+        <View style={styles.sectionMargin}>
+          <DoctorProfileStrength
+            photo={!!doctor.photo || !!doctor.avatarUrl}
+            education={!!(doctor.qualifications && doctor.qualifications.length > 0) || !!(doctor.education && doctor.education.length > 0)}
+            specialization={!!doctor.specialization}
+            experience={(doctor.experienceYears || doctor.experience) > 0}
+          />
+        </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -258,9 +381,15 @@ export default function DoctorProfileScreen() {
            <Text style={styles.priceLabel}>Consultation</Text>
            <Text style={styles.priceValue}>₹{doctor.consultationFee || doctor.fee}</Text>
         </View>
-        <Button 
-          title="Book Appointment" 
-          onPress={() => router.push({ pathname: '/booking/[id]', params: { id: doctor.id } })}
+        <Button
+          title="Book Appointment"
+          onPress={() => router.push({
+            pathname: '/booking/[id]',
+            params: {
+              id: doctor.id,
+              ...(selectedHospitalId ? { hospitalId: selectedHospitalId } : {}),
+            },
+          })}
           size="large"
           style={styles.bookBtn}
         />
@@ -399,6 +528,46 @@ const styles = StyleSheet.create({
   listContent: {
     flex: 1,
   },
+  reviewsAggregate: {
+    marginLeft: 'auto',
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  reviewItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  reviewItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  reviewerName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewComment: {
+    fontSize: 13,
+    color: Colors.text,
+    lineHeight: 19,
+  },
+  seeAllReviews: {
+    alignItems: 'center',
+    paddingTop: 12,
+  },
+  seeAllReviewsText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
   listTitle: {
     fontSize: 15,
     fontWeight: '800',
@@ -462,6 +631,50 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
+  hospitalChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  hospitalChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  hospitalChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  hospitalChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.text,
+    maxWidth: 180,
+  },
+  hospitalChipTextActive: {
+    color: Colors.white,
+  },
+  hospitalChipBadge: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  hospitalChipBadgeActive: {
+    color: Colors.primary,
+    backgroundColor: Colors.white,
+  },
   clinicBox: {
     gap: 6,
   },
@@ -504,25 +717,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: Colors.white,
-    padding: 20,
-    paddingBottom: 34,
+    paddingHorizontal: 16,        // was 20 — gives the button ~8 px more room on narrow phones
+    paddingTop: 14,
+    paddingBottom: 28,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 12,                      // was 20
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
     ...crossPlatformShadow({ color: Colors.primary, offsetY: -4, opacity: 0.1, radius: 12, elevation: 12 }),
   },
   priceContainer: {
     gap: 2,
+    flexShrink: 0,
   },
   priceLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: Colors.textLight,
   },
   priceValue: {
-    fontSize: 24,
+    fontSize: 20,                 // was 24 — leaves more horizontal room for the button
     fontWeight: '900',
     color: Colors.text,
   },

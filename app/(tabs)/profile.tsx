@@ -7,6 +7,7 @@ import {
   ClipboardList,
   HelpCircle,
   LogOut,
+  Mail,
   Phone,
   ChevronRight,
   Building2,
@@ -17,6 +18,11 @@ import {
   AlertCircle,
   ArrowRight,
   PlusCircle,
+  Briefcase,
+  Activity,
+  Users,
+  Power,
+  Trash2,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -27,6 +33,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -43,6 +50,7 @@ import {
   useHospitalManagerDashboard,
   useDoctorOnboardingStatus,
   useHospitalOnboardingStatus,
+  useDeactivateProfile,
 } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
 
@@ -57,14 +65,20 @@ export default function ProfileScreen() {
   // Role-specific status data — hooks always called (Rules of Hooks)
   const isDoctor = user?.role === 'DOCTOR';
   const isHospitalManager = user?.role === 'HOSPITAL_MANAGER';
+  const isReceptionist = user?.role === 'HOSPITAL_RECEPTIONIST';
   const isPatient = !user?.role || user.role === 'PATIENT';
   const { data: doctorData, isLoading: doctorLoading } = useDoctorDashboard({ enabled: isDoctor });
   const { data: hospitalData, isLoading: hospitalLoading } = useHospitalManagerDashboard({
     enabled: isHospitalManager,
   });
   // For patients: check if they've started any onboarding (drives smart CTA)
-  const { data: doctorOnboardingStatus } = useDoctorOnboardingStatus({ enabled: isPatient && isLoggedIn });
-  const { data: hospitalOnboardingStatus } = useHospitalOnboardingStatus({ enabled: isPatient && isLoggedIn });
+  const { data: doctorOnboardingStatus } = useDoctorOnboardingStatus({
+    enabled: isPatient && isLoggedIn,
+  });
+  const { data: hospitalOnboardingStatus } = useHospitalOnboardingStatus({
+    enabled: isPatient && isLoggedIn,
+  });
+  const deactivate = useDeactivateProfile();
 
   // If not logged in, show a simple prompt
   if (!isLoggedIn) {
@@ -116,6 +130,51 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const handleDeactivate = () => {
+    const doctorSuffix =
+      isDoctor && doctorData
+        ? '\n\nYour profile will no longer appear in patient searches and any upcoming appointments will be cancelled.'
+        : '';
+    Alert.alert(
+      'Deactivate account?',
+      `Your profile will be hidden and any upcoming bookings cancelled. You can log in again anytime to restore it.${doctorSuffix}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Deactivate',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deactivate.mutateAsync(undefined);
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Unable to deactivate account.';
+              Alert.alert('Could not deactivate', message);
+              return;
+            }
+            Alert.alert(
+              'Account deactivated',
+              'Your profile is now hidden and upcoming bookings have been cancelled. Sign in again anytime with the same phone number to restore your account.',
+              [
+                {
+                  text: 'OK',
+                  onPress: async () => {
+                    await logout();
+                    router.replace('/(auth)/login');
+                  },
+                },
+              ],
+              { cancelable: false },
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeletePress = () => {
+    router.push('/profile/delete-confirm');
   };
 
   return (
@@ -288,19 +347,41 @@ export default function ProfileScreen() {
                 </View>
 
                 {doctorData.approvalStatus === 'APPROVED' && (
-                  <TouchableOpacity
-                    style={styles.addHospitalBtn}
-                    onPress={() => router.push('/doctor/add-hospital')}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.addHospitalLeft}>
-                      <Building2 size={16} color={Colors.primary} strokeWidth={2.5} />
-                      <Text style={styles.addHospitalText}>
-                        {doctorData.primaryHospital ? 'Add Another Hospital' : 'Add Your Hospital'}
-                      </Text>
-                    </View>
-                    <PlusCircle size={18} color={Colors.primary} strokeWidth={2} />
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={styles.addHospitalBtn}
+                      onPress={() => router.push('/doctor/add-hospital')}
+                      activeOpacity={0.75}
+                    >
+                      <View style={styles.addHospitalLeft}>
+                        <Building2 size={16} color={Colors.primary} strokeWidth={2.5} />
+                        <Text style={styles.addHospitalText}>Join an Existing Hospital</Text>
+                      </View>
+                      <PlusCircle size={18} color={Colors.primary} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.addHospitalBtn, { marginTop: 8 }]}
+                      onPress={() => router.push('/onboarding/hospital/step1')}
+                      activeOpacity={0.75}
+                    >
+                      <View style={styles.addHospitalLeft}>
+                        <Building2 size={16} color={Colors.primary} strokeWidth={2.5} />
+                        <Text style={styles.addHospitalText}>Register a New Hospital</Text>
+                      </View>
+                      <PlusCircle size={18} color={Colors.primary} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.addHospitalBtn, { marginTop: 8 }]}
+                      onPress={() => router.push('/staff/add-receptionist')}
+                      activeOpacity={0.75}
+                    >
+                      <View style={styles.addHospitalLeft}>
+                        <Users size={16} color={Colors.primary} strokeWidth={2.5} />
+                        <Text style={styles.addHospitalText}>Add Receptionist</Text>
+                      </View>
+                      <PlusCircle size={18} color={Colors.primary} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </>
                 )}
               </>
             ) : (
@@ -373,6 +454,17 @@ export default function ProfileScreen() {
                     ₹{Number(hospitalData.stats.monthRevenue).toLocaleString('en-IN')}
                   </Text>
                 </View>
+
+                {hospitalData.approvalStatus === 'APPROVED' && (
+                  <TouchableOpacity
+                    style={styles.editHospitalBtn}
+                    onPress={() => router.push('/onboarding/hospital/step1?mode=edit' as never)}
+                    activeOpacity={0.85}
+                  >
+                    <Edit size={14} color={Colors.white} strokeWidth={2.2} />
+                    <Text style={styles.editHospitalTxt}>Edit Hospital Details</Text>
+                  </TouchableOpacity>
+                )}
               </>
             ) : (
               <Text style={styles.statusEmpty}>
@@ -380,6 +472,48 @@ export default function ProfileScreen() {
               </Text>
             )}
           </Card>
+        )}
+
+        {/* Receptionist card */}
+        {isReceptionist && (
+          <Card style={styles.statusCard}>
+            <View style={styles.statusHeader}>
+              <Briefcase size={18} color={Colors.primary} strokeWidth={2} />
+              <Text style={styles.statusTitle}>Reception Desk</Text>
+            </View>
+            <Text style={{ fontSize: 13, color: Colors.textSecondary, marginBottom: 10 }}>
+              You are a hospital receptionist. Access your front-desk tools below.
+            </Text>
+            <TouchableOpacity
+              style={styles.addHospitalBtn}
+              onPress={() => router.push('/reception')}
+              activeOpacity={0.75}
+            >
+              <View style={styles.addHospitalLeft}>
+                <Activity size={16} color={Colors.primary} strokeWidth={2.5} />
+                <Text style={styles.addHospitalText}>Open Reception Desk</Text>
+              </View>
+              <ChevronRight size={18} color={Colors.primary} strokeWidth={2} />
+            </TouchableOpacity>
+          </Card>
+        )}
+
+        {/* Hospital Manager — Staff link */}
+        {isHospitalManager && (
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/staff/manage')}>
+            <Card style={styles.menuCard}>
+              <View style={styles.menuRow}>
+                <Users
+                  size={18}
+                  color={Colors.primary}
+                  strokeWidth={2}
+                  style={{ marginRight: 12 }}
+                />
+                <Text style={styles.menuText}>Manage Staff</Text>
+                <ChevronRight size={16} color={Colors.textLight} strokeWidth={2} />
+              </View>
+            </Card>
+          </TouchableOpacity>
         )}
 
         {/* Language Setting */}
@@ -407,22 +541,6 @@ export default function ProfileScreen() {
           </Card>
         </TouchableOpacity>
 
-        {/* Help */}
-        <TouchableOpacity style={styles.menuItem}>
-          <Card style={styles.menuCard}>
-            <View style={styles.menuRow}>
-              <HelpCircle
-                size={18}
-                color={Colors.primary}
-                strokeWidth={2}
-                style={{ marginRight: 12 }}
-              />
-              <Text style={styles.menuText}>{t('helpSupport')}</Text>
-              <ChevronRight size={16} color={Colors.textLight} strokeWidth={2} />
-            </View>
-          </Card>
-        </TouchableOpacity>
-
         {/* Provider section — only for PATIENT role; state-aware per entity */}
         {isPatient && (
           <Card style={styles.providerCard}>
@@ -432,14 +550,20 @@ export default function ProfileScreen() {
             </View>
 
             {/* Doctor CTA */}
-            {(!doctorOnboardingStatus || doctorOnboardingStatus.approvalStatus === 'NOT_STARTED') && (
+            {(!doctorOnboardingStatus ||
+              doctorOnboardingStatus.approvalStatus === 'NOT_STARTED') && (
               <TouchableOpacity
                 style={styles.providerBtn}
                 onPress={() => router.push('/onboarding/doctor/step1')}
               >
                 <Stethoscope size={18} color={Colors.white} strokeWidth={2} />
                 <Text style={styles.providerBtnText}>Become a Doctor</Text>
-                <ArrowRight size={14} color={Colors.white} strokeWidth={2.5} style={{ marginLeft: 'auto' }} />
+                <ArrowRight
+                  size={14}
+                  color={Colors.white}
+                  strokeWidth={2.5}
+                  style={{ marginLeft: 'auto' }}
+                />
               </TouchableOpacity>
             )}
 
@@ -495,7 +619,8 @@ export default function ProfileScreen() {
             <View style={styles.providerDivider} />
 
             {/* Hospital CTA */}
-            {(!hospitalOnboardingStatus || hospitalOnboardingStatus.approvalStatus === 'NOT_STARTED') && (
+            {(!hospitalOnboardingStatus ||
+              hospitalOnboardingStatus.approvalStatus === 'NOT_STARTED') && (
               <TouchableOpacity
                 style={[styles.providerBtn, styles.providerBtnHospital]}
                 onPress={() => router.push('/onboarding/hospital/step1')}
@@ -504,7 +629,12 @@ export default function ProfileScreen() {
                 <Text style={[styles.providerBtnText, { color: Colors.primary }]}>
                   Add a Hospital
                 </Text>
-                <ArrowRight size={14} color={Colors.primary} strokeWidth={2.5} style={{ marginLeft: 'auto' }} />
+                <ArrowRight
+                  size={14}
+                  color={Colors.primary}
+                  strokeWidth={2.5}
+                  style={{ marginLeft: 'auto' }}
+                />
               </TouchableOpacity>
             )}
 
@@ -553,6 +683,82 @@ export default function ProfileScreen() {
             )}
           </Card>
         )}
+
+        {/* Help & Support */}
+        <View style={styles.helpCard}>
+          <View style={styles.helpHeader}>
+            <HelpCircle size={20} color={Colors.primary} strokeWidth={2} />
+            <Text style={styles.helpTitle}>Help & Support</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.helpRow}
+            onPress={() => Linking.openURL('tel:+919008036561')}
+            activeOpacity={0.75}
+          >
+            <View style={styles.helpRowLeft}>
+              <Phone size={16} color={Colors.textSecondary} strokeWidth={2} />
+              <Text style={styles.helpContact}>+91 90080 36561</Text>
+            </View>
+            <ChevronRight size={16} color={Colors.textSecondary} strokeWidth={2} />
+          </TouchableOpacity>
+
+          <View style={styles.helpDivider} />
+
+          <TouchableOpacity
+            style={styles.helpRow}
+            onPress={() => Linking.openURL('mailto:bookflow2026@gmail.com')}
+            activeOpacity={0.75}
+          >
+            <View style={styles.helpRowLeft}>
+              <Mail size={16} color={Colors.textSecondary} strokeWidth={2} />
+              <Text style={styles.helpContact}>bookflow2026@gmail.com</Text>
+            </View>
+            <ChevronRight size={16} color={Colors.textSecondary} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Danger Zone — deactivate / delete */}
+        <View style={styles.dangerZone}>
+          <Text style={styles.dangerLabel}>Account</Text>
+
+          <TouchableOpacity
+            style={styles.dangerRow}
+            onPress={handleDeactivate}
+            activeOpacity={0.75}
+            disabled={deactivate.isPending}
+          >
+            <View style={styles.dangerLeft}>
+              <Power size={18} color={Colors.error} strokeWidth={2} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dangerTitle}>Deactivate Account</Text>
+                <Text style={styles.dangerHint}>
+                  Hide your profile. Log in again anytime to restore.
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={16} color={Colors.textSecondary} strokeWidth={2} />
+          </TouchableOpacity>
+
+          <View style={styles.dangerDivider} />
+
+          <TouchableOpacity
+            style={styles.dangerRow}
+            onPress={handleDeletePress}
+            activeOpacity={0.75}
+          >
+            <View style={styles.dangerLeft}>
+              <Trash2 size={18} color={Colors.error} strokeWidth={2} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dangerTitle}>Delete Account</Text>
+                <Text style={styles.dangerHint}>
+                  Permanently remove your account. This cannot be undone.
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={16} color={Colors.textSecondary} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
 
         {/* Logout */}
         <Button
@@ -753,6 +959,95 @@ const styles = StyleSheet.create({
   menuArrow: {
     fontSize: 16,
     color: Colors.textLight,
+  },
+  helpCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  helpHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  helpTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  helpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  helpRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  helpContact: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  helpDivider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
+    marginVertical: 2,
+  },
+  dangerZone: {
+    marginTop: 16,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.errorLight ?? Colors.borderLight,
+    paddingVertical: 4,
+  },
+  dangerLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  dangerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 8,
+  },
+  dangerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.error,
+  },
+  dangerHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  dangerDivider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
+    marginHorizontal: 16,
   },
   logoutBtn: {
     marginTop: 16,
@@ -957,6 +1252,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 8,
+  },
+  editHospitalBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+  },
+  editHospitalTxt: {
+    fontSize: 13,
+    color: Colors.white,
+    fontWeight: '700' as const,
   },
   addHospitalBtn: {
     flexDirection: 'row' as const,

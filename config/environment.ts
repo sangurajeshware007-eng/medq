@@ -1,5 +1,5 @@
 /**
- * Environment Configuration for MedReachPlus
+ * Environment Configuration for MedQ+
  *
  * Supports three environments: local, qa, production.
  *
@@ -97,7 +97,7 @@ export const API_URL: string = ENV.apiUrl;
 
 // Log environment info in dev mode
 if (ENV.enableDebug) {
-    console.log(`🌐 MedReachPlus Environment: ${ENV.env.toUpperCase()}`);
+    console.log(`🌐 MedQ+ Environment: ${ENV.env.toUpperCase()}`);
     console.log(`🔗 API URL: ${ENV.apiUrl}`);
 }
 

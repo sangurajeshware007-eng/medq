@@ -1,20 +1,34 @@
+import { Image } from 'expo-image';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import {
+  ChevronLeft,
+  Search,
+  MapPin,
+  Users,
+  Clock,
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+  Hospital,
+} from 'lucide-react-native';
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, ActivityIndicator, FlatList,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Image } from 'expo-image';
-import {
-  ChevronLeft, Search, MapPin, Star, Users, Clock,
-  SlidersHorizontal, X, ChevronDown, Hospital,
-} from 'lucide-react-native';
+
 import { Colors } from '../constants/Colors';
 import { useLocation } from '../context/LocationContext';
 import { useNearbyHospitals } from '../hooks/useApiHooks';
-import { crossPlatformShadow } from '../utils/shadow';
 import type { HospitalListItem } from '../services/hospitalService';
+import { crossPlatformShadow } from '../utils/shadow';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -26,12 +40,12 @@ const DISTANCE_CHIPS = [
   { label: '< 50 km', km: 50 },
 ];
 
+// Phase 1: rating sort hidden until reviews ship.
 const SORT_OPTIONS = [
   { label: 'Distance', key: 'distance' },
-  { label: 'Rating', key: 'rating' },
   { label: 'Doctors', key: 'doctors' },
 ] as const;
-type SortKey = 'distance' | 'rating' | 'doctors';
+type SortKey = 'distance' | 'doctors';
 
 const DEPT_PALETTE = [
   { bg: '#DBEAFE', fg: '#1E40AF' },
@@ -78,8 +92,10 @@ function HospitalCard({ item, onPress }: { item: HospitalListItem; onPress: () =
         {/* Details */}
         <View style={styles.cardDetails}>
           <View style={styles.nameRow}>
-            <Text style={styles.hospitalName} numberOfLines={1}>{item.name}</Text>
-            {item.distanceKm != null && (
+            <Text style={styles.hospitalName} numberOfLines={2}>
+              {item.name}
+            </Text>
+            {typeof item.distanceKm === 'number' && (
               <View style={styles.distPill}>
                 <MapPin size={9} color={Colors.primary} strokeWidth={2.5} />
                 <Text style={styles.distTxt}>{item.distanceKm.toFixed(1)} km</Text>
@@ -89,15 +105,15 @@ function HospitalCard({ item, onPress }: { item: HospitalListItem; onPress: () =
 
           <View style={styles.addrRow}>
             <MapPin size={10} color={Colors.textLight} strokeWidth={2} />
-            <Text style={styles.addrTxt} numberOfLines={1}>{item.address}</Text>
+            <Text style={styles.addrTxt} numberOfLines={1}>
+              {item.address}
+            </Text>
           </View>
 
+          {/* Phase 1: hospital rating hidden until reviews ship.
+              Restore the Star + ratingTxt + reviewTxt block when enabled. */}
           <View style={styles.statsRow}>
-            <Star size={11} color={Colors.gold} strokeWidth={2} fill={Colors.gold} />
-            <Text style={styles.ratingTxt}>{item.rating.toFixed(1)}</Text>
-            <Text style={styles.reviewTxt}>({item.totalReviews})</Text>
-            <Text style={styles.dot}>·</Text>
-            <Users size={10} color={Colors.textSecondary} strokeWidth={2} />
+            <Users size={11} color={Colors.textSecondary} strokeWidth={2} />
             <Text style={styles.docTxt}>{item.doctorsCount} doctors</Text>
           </View>
 
@@ -127,7 +143,7 @@ function HospitalCard({ item, onPress }: { item: HospitalListItem; onPress: () =
       </View>
 
       <View style={styles.cardFooter}>
-        <Text style={styles.viewBtn}>View Hospital  →</Text>
+        <Text style={styles.viewBtn}>View Hospital →</Text>
       </View>
     </TouchableOpacity>
   );
@@ -151,7 +167,7 @@ export default function HospitalsScreen() {
 
   // ── Filter state ─────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
-  const [maxKm, setMaxKm] = useState(0);           // 0 = Any
+  const [maxKm, setMaxKm] = useState(0); // 0 = Any
   const [open24x7, setOpen24x7] = useState(false);
   const [activeDepts, setActiveDepts] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortKey>('distance');
@@ -186,8 +202,12 @@ export default function HospitalsScreen() {
   // ── Filtered + sorted list ───────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = hospitals.filter((h) => {
-      if (search && !h.name.toLowerCase().includes(search.toLowerCase()) &&
-          !h.address.toLowerCase().includes(search.toLowerCase())) return false;
+      if (
+        search &&
+        !h.name.toLowerCase().includes(search.toLowerCase()) &&
+        !h.address.toLowerCase().includes(search.toLowerCase())
+      )
+        return false;
       if (maxKm > 0 && (h.distanceKm ?? Infinity) > maxKm) return false;
       if (open24x7 && !h.isOpen24x7) return false;
       if (activeDepts.size > 0 && !h.departments.some((d) => activeDepts.has(d))) return false;
@@ -196,7 +216,6 @@ export default function HospitalsScreen() {
 
     list = [...list].sort((a, b) => {
       if (sortBy === 'distance') return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
-      if (sortBy === 'rating') return b.rating - a.rating;
       return b.doctorsCount - a.doctorsCount;
     });
 
@@ -206,7 +225,7 @@ export default function HospitalsScreen() {
   const currentSort = SORT_OPTIONS.find((o) => o.key === sortBy)!;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -223,7 +242,11 @@ export default function HospitalsScreen() {
           style={[styles.filterIconBtn, showFilters && styles.filterIconActive]}
           onPress={() => setShowFilters((v) => !v)}
         >
-          <SlidersHorizontal size={18} color={showFilters ? Colors.white : Colors.primary} strokeWidth={2} />
+          <SlidersHorizontal
+            size={18}
+            color={showFilters ? Colors.white : Colors.primary}
+            strokeWidth={2}
+          />
           {hasFilters && <View style={styles.filterDot} />}
         </TouchableOpacity>
       </View>
@@ -258,7 +281,9 @@ export default function HospitalsScreen() {
                   style={[styles.chip, maxKm === c.km && styles.chipActive]}
                   onPress={() => setMaxKm(c.km)}
                 >
-                  <Text style={[styles.chipTxt, maxKm === c.km && styles.chipTxtActive]}>{c.label}</Text>
+                  <Text style={[styles.chipTxt, maxKm === c.km && styles.chipTxtActive]}>
+                    {c.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -268,7 +293,11 @@ export default function HospitalsScreen() {
           {allDepts.length > 0 && (
             <>
               <Text style={[styles.filterLabel, { marginTop: 10 }]}>Services</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipScroll}
+              >
                 <View style={styles.chipRow}>
                   {allDepts.map((d) => {
                     const active = activeDepts.has(d);
@@ -276,10 +305,17 @@ export default function HospitalsScreen() {
                     return (
                       <TouchableOpacity
                         key={d}
-                        style={[styles.chip, active && { backgroundColor: c.bg, borderColor: c.fg }]}
+                        style={[
+                          styles.chip,
+                          active && { backgroundColor: c.bg, borderColor: c.fg },
+                        ]}
                         onPress={() => toggleDept(d)}
                       >
-                        <Text style={[styles.chipTxt, active && { color: c.fg, fontWeight: '700' }]}>{d}</Text>
+                        <Text
+                          style={[styles.chipTxt, active && { color: c.fg, fontWeight: '700' }]}
+                        >
+                          {d}
+                        </Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -293,8 +329,14 @@ export default function HospitalsScreen() {
             style={[styles.toggleRow, open24x7 && styles.toggleRowActive]}
             onPress={() => setOpen24x7((v) => !v)}
           >
-            <Clock size={14} color={open24x7 ? Colors.primary : Colors.textSecondary} strokeWidth={2} />
-            <Text style={[styles.toggleTxt, open24x7 && styles.toggleTxtActive]}>Open 24×7 only</Text>
+            <Clock
+              size={14}
+              color={open24x7 ? Colors.primary : Colors.textSecondary}
+              strokeWidth={2}
+            />
+            <Text style={[styles.toggleTxt, open24x7 && styles.toggleTxtActive]}>
+              Open 24×7 only
+            </Text>
             <View style={[styles.toggleSwitch, open24x7 && styles.toggleSwitchOn]}>
               <View style={[styles.toggleThumb, open24x7 && styles.toggleThumbOn]} />
             </View>
@@ -313,7 +355,9 @@ export default function HospitalsScreen() {
       {/* Results bar */}
       <View style={styles.resultsBar}>
         <Text style={styles.resultCount}>
-          {isLoading ? 'Loading…' : `${filtered.length} hospital${filtered.length !== 1 ? 's' : ''}`}
+          {isLoading
+            ? 'Loading…'
+            : `${filtered.length} hospital${filtered.length !== 1 ? 's' : ''}`}
         </Text>
         <TouchableOpacity style={styles.sortBtn} onPress={() => setShowSort((v) => !v)}>
           <Text style={styles.sortTxt}>Sort: {currentSort.label}</Text>
@@ -328,7 +372,10 @@ export default function HospitalsScreen() {
             <TouchableOpacity
               key={o.key}
               style={[styles.sortOption, sortBy === o.key && styles.sortOptionActive]}
-              onPress={() => { setSortBy(o.key); setShowSort(false); }}
+              onPress={() => {
+                setSortBy(o.key);
+                setShowSort(false);
+              }}
             >
               <Text style={[styles.sortOptionTxt, sortBy === o.key && styles.sortOptionTxtActive]}>
                 {o.label}
@@ -364,7 +411,9 @@ export default function HospitalsScreen() {
           renderItem={({ item }) => (
             <HospitalCard
               item={item}
-              onPress={() => router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })}
+              onPress={() =>
+                router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
+              }
             />
           )}
         />
@@ -394,76 +443,151 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
   locationTxt: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500' },
   filterIconBtn: {
-    width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Colors.primaryLight, borderWidth: 1.5, borderColor: Colors.primary + '40',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + '40',
   },
   filterIconActive: { backgroundColor: Colors.primary },
   filterDot: {
-    position: 'absolute', top: 6, right: 6,
-    width: 7, height: 7, borderRadius: 4,
-    backgroundColor: Colors.accent, borderWidth: 1.5, borderColor: Colors.white,
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.accent,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
   },
 
   // Search
   searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginVertical: 12,
-    backgroundColor: Colors.white, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11,
-    borderWidth: 1.5, borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 2, opacity: 0.06, radius: 8, elevation: 2 }),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 2,
+      opacity: 0.06,
+      radius: 8,
+      elevation: 2,
+    }),
   },
   searchInput: { flex: 1, fontSize: 14, color: Colors.text, padding: 0 },
 
   // Filter panel
   filterPanel: {
-    backgroundColor: Colors.white, marginHorizontal: 16, marginBottom: 6,
-    borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 4, opacity: 0.08, radius: 12, elevation: 4 }),
+    backgroundColor: Colors.white,
+    marginHorizontal: 16,
+    marginBottom: 6,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 4,
+      opacity: 0.08,
+      radius: 12,
+      elevation: 4,
+    }),
   },
-  filterLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   chipScroll: { marginHorizontal: -4 },
   chipRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 4 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-    backgroundColor: Colors.background, borderWidth: 1.5, borderColor: Colors.borderLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
   },
   chipActive: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
   chipTxt: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   chipTxtActive: { color: Colors.primary, fontWeight: '700' },
   toggleRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12,
-    padding: 12, borderRadius: 12, backgroundColor: Colors.background,
-    borderWidth: 1.5, borderColor: Colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.background,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
   },
   toggleRowActive: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
   toggleTxt: { flex: 1, fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   toggleTxtActive: { color: Colors.primary, fontWeight: '700' },
   toggleSwitch: {
-    width: 36, height: 20, borderRadius: 10, backgroundColor: Colors.borderLight,
-    justifyContent: 'center', padding: 2,
+    width: 36,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.borderLight,
+    justifyContent: 'center',
+    padding: 2,
   },
   toggleSwitchOn: { backgroundColor: Colors.primary },
   toggleThumb: { width: 16, height: 16, borderRadius: 8, backgroundColor: Colors.white },
   toggleThumbOn: { alignSelf: 'flex-end' },
   clearBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    marginTop: 12, alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 12,
+    alignSelf: 'flex-end',
   },
   clearTxt: { fontSize: 12, color: Colors.accent, fontWeight: '700' },
 
   // Results bar
   resultsBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   resultCount: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   sortTxt: { fontSize: 13, color: Colors.primary, fontWeight: '700' },
   sortDropdown: {
-    position: 'absolute', top: 185, right: 16, zIndex: 999,
-    backgroundColor: Colors.white, borderRadius: 12, overflow: 'hidden',
-    borderWidth: 1, borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 8, opacity: 0.15, radius: 16, elevation: 8 }),
+    position: 'absolute',
+    top: 185,
+    right: 16,
+    zIndex: 999,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 8,
+      opacity: 0.15,
+      radius: 16,
+      elevation: 8,
+    }),
   },
   sortOption: { paddingHorizontal: 20, paddingVertical: 12 },
   sortOptionActive: { backgroundColor: Colors.primaryLight },
@@ -472,29 +596,68 @@ const styles = StyleSheet.create({
 
   // Hospital card
   card: {
-    backgroundColor: Colors.white, borderRadius: 18, marginHorizontal: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 4, opacity: 0.1, radius: 14, elevation: 5 }),
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 4,
+      opacity: 0.1,
+      radius: 14,
+      elevation: 5,
+    }),
   },
   cardBody: { flexDirection: 'row', padding: 14 },
   thumbWrap: { marginRight: 14 },
   thumb: {
-    width: 80, height: 80, borderRadius: 14,
+    width: 80,
+    height: 80,
+    borderRadius: 14,
     backgroundColor: Colors.borderLight,
   },
   badge24: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    position: 'absolute', bottom: 4, left: 0, right: 0, marginHorizontal: 4,
-    backgroundColor: Colors.primary, borderRadius: 6,
-    paddingHorizontal: 4, paddingVertical: 2, justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    position: 'absolute',
+    bottom: 4,
+    left: 0,
+    right: 0,
+    marginHorizontal: 4,
+    backgroundColor: Colors.primary,
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    justifyContent: 'center',
   },
   badge24Txt: { fontSize: 8, color: Colors.white, fontWeight: '800' },
   cardDetails: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  hospitalName: { fontSize: 15, fontWeight: '800', color: Colors.text, flex: 1, marginRight: 6 },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  hospitalName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.text,
+    flex: 1,
+    marginRight: 6,
+    lineHeight: 19,
+  },
   distPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    backgroundColor: Colors.primaryLight, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 1,
   },
   distTxt: { fontSize: 11, color: Colors.primary, fontWeight: '700' },
   addrRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
@@ -509,25 +672,39 @@ const styles = StyleSheet.create({
   deptChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   deptTxt: { fontSize: 10, fontWeight: '700' },
   deptMore: {
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     backgroundColor: Colors.borderLight,
   },
   deptMoreTxt: { fontSize: 10, fontWeight: '700', color: Colors.textSecondary },
   cardFooter: {
-    borderTopWidth: 1, borderTopColor: Colors.borderLight,
-    paddingHorizontal: 14, paddingVertical: 10, alignItems: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignItems: 'flex-end',
   },
   viewBtn: { fontSize: 13, color: Colors.primary, fontWeight: '700' },
 
   // States
   list: { paddingTop: 4, paddingBottom: 24 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 32,
+  },
   loadingTxt: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
   emptyTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginTop: 8 },
   emptySubtitle: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19 },
   clearAllBtn: {
-    marginTop: 12, backgroundColor: Colors.primaryLight, borderRadius: 12,
-    paddingHorizontal: 24, paddingVertical: 10,
+    marginTop: 12,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
   },
   clearAllTxt: { fontSize: 13, color: Colors.primary, fontWeight: '700' },
 });

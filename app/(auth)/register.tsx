@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,16 +17,91 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import MedQLogo from '../../components/brand/MedQLogo';
+import { Image } from 'react-native';
 import Input from '../../components/Input';
+
+const BRAND_LOGO = require('../../assets/logo/new/logo-icon.png');
 import Button from '../../components/Button';
 import LanguageToggle from '../../components/LanguageToggle';
 import { registerSchema, type RegisterFormValues } from '../../utils/authSchemas';
+
+const TERMS_AND_CONDITIONS = `TERMS AND CONDITIONS OF USE
+MedQ+ Healthcare Platform
+
+Last Updated: May 2026
+
+1. ACCEPTANCE OF TERMS
+By creating an account on MedQ+, you agree to be bound by these Terms and Conditions. If you do not agree, please do not register or use this platform.
+
+2. NATURE OF SERVICE — MEDIATOR DISCLAIMER
+MedQ+ is a technology platform that connects patients with independent healthcare providers (doctors, hospitals, and clinics). MedQ+ is NOT a healthcare provider. We do not:
+• Provide medical advice, diagnosis, or treatment
+• Employ or supervise the listed doctors
+• Guarantee the accuracy of doctor credentials or qualifications
+• Take responsibility for any medical prescriptions, procedures, or medicines prescribed by doctors listed on this platform
+• Accept liability for any medical outcomes arising from consultations booked through MedQ+
+
+Patients interact with doctors entirely at their own risk. MedQ+ acts solely as an appointment booking intermediary.
+
+3. DOCTOR DISCLAIMER
+Doctors listed on MedQ+ are independent professionals. Their qualifications, registration status, and clinical decisions are their sole responsibility. MedQ+ verifies submitted credentials as a best-effort process but does not guarantee their accuracy. Any medical prescription, medicine recommendation, or clinical advice given by a doctor is between the patient and the doctor — MedQ+ has no liability for the same.
+
+4. PATIENT RESPONSIBILITIES
+• You are responsible for providing accurate information during registration and appointment booking.
+• You must verify a doctor's credentials independently before proceeding with any treatment.
+• In a medical emergency, contact emergency services (108) immediately — do not rely on MedQ+ for emergency care.
+• Minors (under 18) may only use the platform under supervision of a parent or legal guardian.
+
+5. APPOINTMENT BOOKINGS
+• Booking an appointment does not guarantee consultation; availability depends on the doctor's schedule.
+• Cancellation and rescheduling are subject to the individual doctor's and hospital's policy.
+• MedQ+ is not responsible for missed appointments due to technical issues or doctor unavailability.
+
+6. DATA PRIVACY
+• Your personal and health information is stored securely and used only to facilitate appointments.
+• We do not sell your personal data to third parties.
+• Health records shared during consultations remain between you and your doctor.
+
+7. LIMITATION OF LIABILITY
+MedQ+ shall not be liable for any direct, indirect, incidental, or consequential damages arising from:
+• Use or inability to use the platform
+• Medical decisions made by healthcare providers booked through MedQ+
+• Loss of data or unauthorized access to your account due to your own negligence
+
+8. GOVERNING LAW
+These Terms are governed by the laws of India. Disputes shall be subject to the jurisdiction of courts in Karnataka, India.
+
+9. CHANGES TO TERMS
+MedQ+ reserves the right to update these Terms at any time. Continued use of the platform after changes constitutes acceptance of the revised Terms.
+
+10. CONTACT
+For support or queries: +91 90080 36561
+Email: support@medqplus.in`;
+
+function TermsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Terms & Conditions</Text>
+          <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
+            <Text style={styles.modalCloseTxt}>Close</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.modalScroll} contentContainerStyle={{ padding: 20 }}>
+          <Text style={styles.termsText}>{TERMS_AND_CONDITIONS}</Text>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
 
 export default function RegisterScreen() {
   const { t } = useLanguage();
   const { signup, loading } = useAuth();
   const router = useRouter();
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsVisible, setTermsVisible] = useState(false);
 
   const {
     control,
@@ -65,8 +142,7 @@ export default function RegisterScreen() {
 
           {/* Logo */}
           <View style={styles.logoSection}>
-            <MedQLogo size={72} />
-            <Text style={styles.appName}>{t('appName')}</Text>
+            <Image source={BRAND_LOGO} style={styles.brandLogo} resizeMode="contain" />
             <Text style={styles.tagline}>Create your account</Text>
           </View>
 
@@ -164,12 +240,33 @@ export default function RegisterScreen() {
               )}
             />
 
+            {/* Terms & Conditions */}
+            <TouchableOpacity
+              style={styles.termsRow}
+              onPress={() => setTermsAccepted((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+                {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.termsText2}>
+                I hereby declare that the information furnished by me is correct. I have read and agree to the{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={(e) => { e.stopPropagation(); setTermsVisible(true); }}
+                >
+                  Terms & Conditions
+                </Text>
+                {' '}including the mediator disclaimer.
+              </Text>
+            </TouchableOpacity>
+
             {/* Signup Button */}
             <Button
               title="Create Account"
               onPress={handleSubmit(onSubmit)}
               loading={loading}
-              disabled={!isValid || loading}
+              disabled={!isValid || !termsAccepted || loading}
               size="large"
             />
 
@@ -183,6 +280,8 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <TermsModal visible={termsVisible} onClose={() => setTermsVisible(false)} />
     </SafeAreaView>
   );
 }
@@ -193,6 +292,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, padding: 24, justifyContent: 'center' },
   langRow: { position: 'absolute', top: 16, right: 0 },
   logoSection: { alignItems: 'center', marginBottom: 36 },
+  brandLogo: { width: 240, height: 91, marginBottom: 12 },
   logo: { fontSize: 56, marginBottom: 8 },
   appName: { fontSize: 28, fontWeight: '900', color: Colors.primary, marginBottom: 4 },
   tagline: { fontSize: 15, color: Colors.textSecondary },
@@ -220,4 +320,65 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
+  // T&C checkbox row
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkmark: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 16,
+  },
+  termsText2: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  termsLink: {
+    color: Colors.primary,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  // Modal
+  modalContainer: { flex: 1, backgroundColor: Colors.white },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  modalCloseBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+  },
+  modalCloseTxt: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  modalScroll: { flex: 1 },
+  termsText: { fontSize: 13, color: Colors.text, lineHeight: 22 },
 });

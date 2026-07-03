@@ -5,6 +5,7 @@ import { MapPin } from 'lucide-react-native';
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
 import { crossPlatformShadow } from '../utils/shadow';
+import LocalizedName from './LocalizedName';
 
 interface HospitalCardProps {
   name: string;
@@ -30,7 +31,7 @@ export default function HospitalCard({
       <Image source={image} style={styles.image} contentFit="cover" transition={300} />
       <View style={styles.overlay} />
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        <LocalizedName name={name} style={styles.name} numberOfLines={1} />
         <View style={styles.infoRow}>
           <Text style={styles.distance}>{distance}</Text>
           {/* Phase 1: star rating hidden until reviews ship.

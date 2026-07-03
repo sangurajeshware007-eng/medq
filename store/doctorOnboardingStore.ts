@@ -46,6 +46,8 @@ export interface LinkedHospital {
   availability: DayAvailability[];
 }
 
+export type UploadStatus = 'idle' | 'uploading' | 'done' | 'error';
+
 export interface DoctorProfileStep {
   specialization: string;
   gender: string;
@@ -59,6 +61,11 @@ export interface DoctorProfileStep {
   registrationNumber: string;
   practiceStartedYear: string;
   avatarUrl: string;      // public URL set after R2 upload
+  // Medical registration certificate (JPEG/PNG, <1MB) — required for Step 1 save.
+  registrationCertificateUri: string;         // local preview URI (camera roll path)
+  registrationCertificateFileName: string;    // last picked file name (for the tile label)
+  registrationCertificateKey: string;         // private-bucket S3 key returned by presign upload
+  registrationCertificateUploadStatus: UploadStatus;
 }
 
 export interface DoctorDetailsStep {
@@ -110,6 +117,10 @@ const defaultProfile: DoctorProfileStep = {
   registrationNumber: '',
   practiceStartedYear: '',
   avatarUrl: '',
+  registrationCertificateUri: '',
+  registrationCertificateFileName: '',
+  registrationCertificateKey: '',
+  registrationCertificateUploadStatus: 'idle',
 };
 
 const defaultDetails: DoctorDetailsStep = {

@@ -1,5 +1,5 @@
 /**
- * Typography scale for MedReachPlus
+ * Typography scale for MedQ+
  *
  * Based on a modular scale (major third: 1.25x)
  * Display → Heading → Body → Caption → Label

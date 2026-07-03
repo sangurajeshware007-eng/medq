@@ -1,4 +1,14 @@
+/**
+ * Phone Entry Screen — unified entry point for login and registration.
+ *
+ * The user types their mobile number and taps "Send OTP".
+ * The backend auto-detects new vs returning users — there is no separate
+ * "login" / "register" split. OTP verification handles both.
+ */
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'expo-router';
 import React from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import {
   View,
   Text,
@@ -6,45 +16,50 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+
+import Input from '../../components/Input';
+import LanguageToggle from '../../components/LanguageToggle';
+import { phoneSchema, type PhoneFormValues } from '../../utils/authSchemas';
 
 import { Colors } from '@/constants/Colors';
-import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import MedQLogo from '../../components/brand/MedQLogo';
-import Input from '../../components/Input';
-import Button from '../../components/Button';
-import LanguageToggle from '../../components/LanguageToggle';
-import { loginSchema, type LoginFormValues } from '../../utils/authSchemas';
+import { useLanguage } from '@/context/LanguageContext';
 
-export default function LoginScreen() {
+const BRAND_LOGO = require('../../assets/logo/new/logo-icon.png');
+
+export default function PhoneEntryScreen() {
   const { t } = useLanguage();
-  const { login, loading } = useAuth();
+  const { sendOtp, loading } = useAuth();
   const router = useRouter();
 
   const {
     control,
     handleSubmit,
     setError,
-    formState: { errors, isValid },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+    formState: { errors },
+  } = useForm<PhoneFormValues>({
+    resolver: zodResolver(phoneSchema),
     mode: 'onChange',
-    defaultValues: { phone: '', password: '' },
+    defaultValues: { phone: '' },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
-    const result = await login(values.phone, values.password);
-    if (!result.success && result.error) {
-      // Surface server-side error under the password field
-      setError('password', { message: result.error });
+  // Tracks the last phone value we auto-submitted so we don't re-fire when the
+  // user retypes the same 10 digits after an error. Edit one digit and retype
+  // and the guard resets.
+  const lastAutoSubmittedRef = React.useRef<string | null>(null);
+
+  const onSubmit = async (values: PhoneFormValues) => {
+    const result = await sendOtp(values.phone);
+    if (result.success) {
+      router.push('/(auth)/otp');
+    } else {
+      setError('phone', { message: result.error });
+      lastAutoSubmittedRef.current = null; // allow another attempt
     }
-    // On success, (auth)/_layout.tsx redirects to (tabs) via <Redirect>
-    // as soon as isLoggedIn flips. No imperative navigation here.
   };
 
   return (
@@ -64,19 +79,15 @@ export default function LoginScreen() {
 
           {/* Logo */}
           <View style={styles.logoSection}>
-            <MedQLogo size={72} />
-            <Text style={styles.appName}>{t('appName')}</Text>
+            <Image source={BRAND_LOGO} style={styles.brandLogo} resizeMode="contain" />
             <Text style={styles.tagline}>{t('loginSubtitle')}</Text>
           </View>
 
           {/* Form */}
           <View style={styles.formSection}>
-            <Text style={styles.stepTitle}>Welcome back</Text>
-            <Text style={styles.stepDesc}>
-              Enter your phone number and password to login
-            </Text>
+            <Text style={styles.stepTitle}>{t('enterMobileNumber')}</Text>
+            <Text style={styles.stepDesc}>{t('loginDesc')}</Text>
 
-            {/* Phone */}
             <Controller
               control={control}
               name="phone"
@@ -87,51 +98,40 @@ export default function LoginScreen() {
                   </View>
                   <View style={styles.phoneInputWrapper}>
                     <Input
-                      placeholder="Enter 10-digit number"
+                      placeholder={t('mobileNumberPlaceholder')}
                       value={value}
-                      onChangeText={(text) => onChange(text.replace(/[^0-9]/g, '').slice(0, 10))}
+                      onChangeText={(text) => {
+                        const next = text.replace(/[^0-9]/g, '').slice(0, 10);
+                        onChange(next);
+                        // Auto-send OTP as soon as 10 digits land — no button tap needed.
+                        if (
+                          next.length === 10 &&
+                          next !== lastAutoSubmittedRef.current &&
+                          !loading
+                        ) {
+                          lastAutoSubmittedRef.current = next;
+                          handleSubmit(onSubmit)();
+                        }
+                      }}
                       keyboardType="phone-pad"
                       maxLength={10}
                       style={{ marginBottom: 0 }}
                       error={errors.phone?.message}
+                      autoFocus
                     />
                   </View>
                 </View>
               )}
             />
 
-            {/* Password */}
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Password"
-                  placeholder="Enter your password"
-                  value={value}
-                  onChangeText={onChange}
-                  secureTextEntry
-                  error={errors.password?.message}
-                />
-              )}
-            />
+            {loading && (
+              <View style={styles.sendingRow}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.sendingText}>{t('sendingOtp')}</Text>
+              </View>
+            )}
 
-            {/* Login Button */}
-            <Button
-              title="Login"
-              onPress={handleSubmit(onSubmit)}
-              loading={loading}
-              disabled={!isValid || loading}
-              size="large"
-            />
-
-            {/* Switch to Register */}
-            <Text
-              style={styles.switchLink}
-              onPress={() => router.push('/(auth)/register')}
-            >
-              {t('dontHaveAccount') || "Don't have an account? Sign up"}
-            </Text>
+            <Text style={styles.disclaimer}>{t('loginDisclaimer')}</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -144,14 +144,14 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, padding: 24, justifyContent: 'center' },
   langRow: { position: 'absolute', top: 16, right: 0 },
-  logoSection: { alignItems: 'center', marginBottom: 36 },
-  logo: { fontSize: 56, marginBottom: 8 },
+  logoSection: { alignItems: 'center', marginBottom: 48 },
+  brandLogo: { width: 240, height: 91, marginBottom: 12 },
   appName: { fontSize: 28, fontWeight: '900', color: Colors.primary, marginBottom: 4 },
   tagline: { fontSize: 15, color: Colors.textSecondary },
   formSection: { gap: 4 },
-  stepTitle: { fontSize: 20, fontWeight: '800', color: Colors.text, marginBottom: 4 },
-  stepDesc: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 20 },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  stepTitle: { fontSize: 22, fontWeight: '800', color: Colors.text, marginBottom: 8 },
+  stepDesc: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22, marginBottom: 24 },
+  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
   countryCode: {
     height: 50,
     paddingHorizontal: 14,
@@ -164,11 +164,23 @@ const styles = StyleSheet.create({
   },
   countryCodeText: { fontSize: 15, fontWeight: '600', color: Colors.text },
   phoneInputWrapper: { flex: 1 },
-  switchLink: {
+  sendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  sendingText: {
     fontSize: 14,
-    color: Colors.primary,
     fontWeight: '600',
+    color: Colors.primary,
+  },
+  disclaimer: {
+    fontSize: 12,
+    color: Colors.textLight,
     textAlign: 'center',
-    marginTop: 20,
+    lineHeight: 18,
+    marginTop: 16,
   },
 });

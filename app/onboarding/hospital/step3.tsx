@@ -1,21 +1,28 @@
 /**
  * Hospital Onboarding Step 3 — Review & Submit
  */
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  ChevronLeft,
+  Building2,
+  FileText,
+  MapPin,
+  Phone,
+  Clock,
+  CheckCircle,
+} from 'lucide-react-native';
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import {
-  ChevronLeft, Building2, FileText, MapPin, Phone, Clock, CheckCircle,
-} from 'lucide-react-native';
-import { Colors } from '../../../constants/Colors';
-import { crossPlatformShadow } from '../../../utils/shadow';
-import { useHospitalOnboardingStore } from '../../../store/hospitalOnboardingStore';
-import type { HospitalAddressStep } from '../../../store/hospitalOnboardingStore';
-import onboardingService from '../../../services/onboardingService';
-import StepProgressBar from '../../../components/onboarding/StepProgressBar';
+
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
+import StepProgressBar from '../../../components/onboarding/StepProgressBar';
+import { Colors } from '../../../constants/Colors';
+import onboardingService from '../../../services/onboardingService';
+import { useHospitalOnboardingStore } from '../../../store/hospitalOnboardingStore';
+import type { HospitalAddressStep } from '../../../store/hospitalOnboardingStore';
+import { crossPlatformShadow } from '../../../utils/shadow';
 
 const STEP_LABELS = ['Details', 'Documents', 'Review'];
 
@@ -42,6 +49,9 @@ const DOC_LABELS: Record<string, string> = {
 
 export default function HospitalStep3() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isEditMode = mode === 'edit';
+  const editSuffix = isEditMode ? '?mode=edit' : '';
   const store = useHospitalOnboardingStore();
   const { profile, documents, completedSteps } = store;
   const [loading, setLoading] = useState(false);
@@ -49,6 +59,14 @@ export default function HospitalStep3() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      // Edit-mode saves already applied the changes directly during step1/step2 —
+      // an approved hospital doesn't go through the approval cycle again. Just
+      // route the owner back to their profile.
+      if (isEditMode) {
+        router.replace('/(tabs)/profile');
+        return;
+      }
+
       await onboardingService.submitHospitalOnboarding();
       // Don't reset store here — keep data for re-edit if rejected.
       // Store is cleared when status transitions to APPROVED (via layout hydration).
@@ -65,7 +83,7 @@ export default function HospitalStep3() {
   const uploadedDocs = documents.documents.filter((d) => d.uri);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ChevronLeft size={24} color={Colors.text} strokeWidth={2} />
@@ -79,7 +97,9 @@ export default function HospitalStep3() {
         totalSteps={3}
         labels={STEP_LABELS}
         completedSteps={completedSteps}
-        onStepPress={(step) => router.push(`/onboarding/hospital/step${step}` as never)}
+        onStepPress={(step) =>
+          router.push(`/onboarding/hospital/step${step}${editSuffix}` as never)
+        }
       />
 
       <ScrollView
@@ -173,14 +193,12 @@ export default function HospitalStep3() {
               )}
             </View>
           ))}
-          {uploadedDocs.length === 0 && (
-            <Text style={styles.emptyText}>No documents uploaded</Text>
-          )}
+          {uploadedDocs.length === 0 && <Text style={styles.emptyText}>No documents uploaded</Text>}
         </Card>
 
         {/* Submit */}
         <Button
-          title="Submit for Approval"
+          title={isEditMode ? 'Done' : 'Submit for Approval'}
           onPress={handleSubmit}
           loading={loading}
           disabled={loading}
@@ -189,8 +207,9 @@ export default function HospitalStep3() {
         />
 
         <Text style={styles.disclaimer}>
-          By submitting, you confirm that all the information provided is accurate.
-          Our team will review your hospital within 24–48 hours.
+          {isEditMode
+            ? 'Your changes are already saved and live. Patients see the latest details immediately.'
+            : 'By submitting, you confirm that all the information provided is accurate. Our team will review your hospital within 24–48 hours.'}
         </Text>
 
         <View style={{ height: 40 }} />
@@ -202,8 +221,12 @@ export default function HospitalStep3() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: Colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.white,
     ...crossPlatformShadow({ offsetY: 2, opacity: 0.08, radius: 8, elevation: 3 }),
   },
   backBtn: { padding: 4 },
@@ -216,13 +239,22 @@ const styles = StyleSheet.create({
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   cardTitle: { fontSize: 15, fontWeight: '800', color: Colors.text },
   reviewRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
   reviewLabel: { fontSize: 13, color: Colors.textSecondary },
   reviewValue: { fontSize: 14, fontWeight: '600', color: Colors.text },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  miniChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: Colors.primaryLight },
+  miniChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryLight,
+  },
   miniChipText: { fontSize: 12, fontWeight: '600', color: Colors.primary },
   docItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
   docText: { fontSize: 14, color: Colors.text, flex: 1 },
@@ -230,8 +262,11 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, color: Colors.textLight, fontStyle: 'italic' },
   submitBtn: { marginTop: 20 },
   disclaimer: {
-    fontSize: 12, color: Colors.textLight, textAlign: 'center',
-    marginTop: 12, lineHeight: 18, paddingHorizontal: 20,
+    fontSize: 12,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 18,
+    paddingHorizontal: 20,
   },
 });
-

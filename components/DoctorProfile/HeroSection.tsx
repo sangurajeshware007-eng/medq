@@ -23,7 +23,7 @@ export default function HeroSection({ doctor }: HeroSectionProps) {
         </View>
 
         <View style={styles.details}>
-          <Text style={styles.name}>{doctor.name}</Text>
+          <Text style={styles.name} numberOfLines={2}>{doctor.name}</Text>
           <View style={styles.degreeRow}>
             <GraduationCap size={14} color={Colors.textSecondary} />
             <Text style={styles.degreeText}>{doctor.degree || doctor.specialization}</Text>
@@ -37,14 +37,19 @@ export default function HeroSection({ doctor }: HeroSectionProps) {
           </View>
 
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <View style={styles.ratingBadge}>
-                <Star size={12} fill={Colors.gold} color={Colors.gold} />
-                <Text style={styles.ratingText}>{doctor.rating || '4.0'}</Text>
-              </View>
-              <Text style={styles.statLabel}>{doctor.totalReviews || doctor.reviewCount || 0} Reviews</Text>
-            </View>
-            <View style={styles.divider} />
+            {/* Hide rating until the backend exposes it (≥5 reviews) — small-sample protection. */}
+            {(doctor.totalReviews ?? 0) > 0 && (
+              <>
+                <View style={styles.statItem}>
+                  <View style={styles.ratingBadge}>
+                    <Star size={12} fill={Colors.gold} color={Colors.gold} />
+                    <Text style={styles.ratingText}>{Number(doctor.rating).toFixed(1)}</Text>
+                  </View>
+                  <Text style={styles.statLabel}>{doctor.totalReviews} Reviews</Text>
+                </View>
+                <View style={styles.divider} />
+              </>
+            )}
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{doctor.experienceYears || doctor.experience}+ Yrs</Text>
               <Text style={styles.statLabel}>Exp.</Text>
@@ -59,22 +64,22 @@ export default function HeroSection({ doctor }: HeroSectionProps) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.white,
-    padding: 20,
+    padding: 16,
     borderRadius: 24,
     marginBottom: 16,
     ...crossPlatformShadow({ color: Colors.shadow, offsetY: 4, opacity: 0.08, radius: 16, elevation: 4 }),
   },
   content: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 14,
   },
   avatarContainer: {
     position: 'relative',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
+    width: 84,                    // smaller avatar gives the details column ~16 px more on iPhone 12
+    height: 84,
+    borderRadius: 18,
     backgroundColor: Colors.borderLight,
   },
   verifiedBadge: {
@@ -88,10 +93,12 @@ const styles = StyleSheet.create({
   },
   details: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,                  // critical so children can shrink for long names
     justifyContent: 'center',
   },
   name: {
-    fontSize: 22,
+    fontSize: 19,                 // was 22 — too wide for iPhone 12; "Dr. Priya Patel" now fits one line
     fontWeight: '900',
     color: Colors.text,
     marginBottom: 4,
@@ -121,11 +128,14 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 10,                      // was 16 — tighter on narrow phones
+    flexWrap: 'wrap',             // safety net: wraps to next line on very narrow viewports
   },
   statItem: {
     flexDirection: 'column',
     alignItems: 'flex-start',
+    flexShrink: 1,
+    minWidth: 0,
   },
   ratingBadge: {
     flexDirection: 'row',

@@ -1,13 +1,13 @@
 /**
  * Doctor Onboarding Step 3 — Link Hospitals & Availability
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Search, MapPin, X, Building2, Star } from 'lucide-react-native';
+import { ChevronLeft, Search, MapPin, X, Building2, Star, Plus } from 'lucide-react-native';
 import { Colors } from '../../../constants/Colors';
 import { crossPlatformShadow } from '../../../utils/shadow';
 import { useDoctorOnboardingStore, type LinkedHospital } from '../../../store/doctorOnboardingStore';
@@ -40,6 +40,16 @@ export default function DoctorStep3() {
   const [linkFee, setLinkFee] = useState(store.profile.consultationFee);
   const [linkRoom, setLinkRoom] = useState('');
   const [linkPrimary, setLinkPrimary] = useState(linkedHospitals.length === 0);
+
+  // Refs used by the "Link Another Hospital" CTA to bounce the user back to the
+  // search field after they've already linked one — saves them scrolling.
+  const scrollRef = useRef<ScrollView>(null);
+  const searchInputRef = useRef<TextInput>(null);
+  const focusSearch = () => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+    setTimeout(() => searchInputRef.current?.focus(), 250);
+  };
+  const hasLinked = linkedHospitals.length > 0;
 
   const searchHospitals = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -142,7 +152,7 @@ export default function DoctorStep3() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ChevronLeft size={24} color={Colors.text} strokeWidth={2} />
@@ -160,20 +170,29 @@ export default function DoctorStep3() {
       />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* Hospital Search */}
-        <Text style={styles.sectionTitle}>Search & Link Hospitals</Text>
+        <Text style={styles.sectionTitle}>
+          {hasLinked ? 'Link Another Hospital' : 'Search & Link Hospitals'}
+        </Text>
+        {hasLinked && (
+          <Text style={styles.sectionHint}>
+            You can practice at multiple hospitals — search below to add another.
+          </Text>
+        )}
         <View style={styles.searchBar}>
           <Search size={18} color={Colors.textLight} strokeWidth={2} />
           <TextInput
+            ref={searchInputRef}
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={handleSearchChange}
-            placeholder="Search hospitals by name..."
+            placeholder={hasLinked ? 'Search to add another hospital…' : 'Search hospitals by name...'}
             placeholderTextColor={Colors.textLight}
           />
         </View>
@@ -208,40 +227,115 @@ export default function DoctorStep3() {
 
         {searching && <Text style={styles.searchingText}>Searching...</Text>}
 
+        {/* No-match empty state — shown after a search returns nothing */}
+        {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
+          <View style={styles.emptyMatch}>
+            <Building2 size={28} color={Colors.textLight} strokeWidth={1.5} />
+            <Text style={styles.emptyMatchTitle}>
+              No hospital matches "{searchQuery}"
+            </Text>
+            <Text style={styles.emptyMatchHint}>
+              If your hospital isn't listed yet, register it now.
+            </Text>
+          </View>
+        )}
+
+        {/* Add Hospital CTA — always visible so doctors can register a new hospital
+            without leaving onboarding. State is persisted in Zustand, so they can
+            come back to this step seamlessly. */}
+        <TouchableOpacity
+          style={styles.addHospitalBtn}
+          onPress={() => router.push('/onboarding/hospital/step1')}
+          activeOpacity={0.75}
+        >
+          <View style={styles.addHospitalIcon}>
+            <Plus size={16} color={Colors.primary} strokeWidth={2.5} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.addHospitalTitle}>Add Hospital</Text>
+            <Text style={styles.addHospitalSub}>
+              Can't find your hospital? Register it.
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Linked Hospitals */}
         {linkedHospitals.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
-              Linked Hospitals ({linkedHospitals.length})
+            <View style={styles.linkedHeaderRow}>
+              <Text style={[styles.sectionTitle, { marginTop: 20, marginBottom: 4 }]}>
+                Linked Hospitals ({linkedHospitals.length})
+              </Text>
+            </View>
+            <Text style={styles.linkedListHint}>
+              Add as many hospitals as you practice at. Each gets its own fee and schedule.
             </Text>
-            {linkedHospitals.map((hospital) => (
-              <View key={hospital.hospitalId} style={styles.linkedCard}>
-                <View style={styles.linkedHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.linkedName}>{hospital.hospitalName}</Text>
-                    <Text style={styles.linkedAddress}>{hospital.address}</Text>
-                    <Text style={styles.linkedFee}>₹{hospital.consultationFee}</Text>
+            {linkedHospitals.map((hospital) => {
+              // Sessions at OTHER linked hospitals on the same day — blocks the
+              // doctor from configuring overlapping sessions across hospitals.
+              const crossHospitalBusy: Record<string, { hospitalName: string; sessionName: string; startTime: string; endTime: string }[]> = {};
+              linkedHospitals
+                .filter((other) => other.hospitalId !== hospital.hospitalId)
+                .forEach((other) => {
+                  other.availability.forEach((dayAvail) => {
+                    dayAvail.sessions.forEach((s) => {
+                      (crossHospitalBusy[dayAvail.day] ??= []).push({
+                        hospitalName: other.hospitalName,
+                        sessionName: s.sessionName,
+                        startTime: s.startTime,
+                        endTime: s.endTime,
+                      });
+                    });
+                  });
+                });
+
+              return (
+                <View key={hospital.hospitalId} style={styles.linkedCard}>
+                  <View style={styles.linkedHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.linkedName}>{hospital.hospitalName}</Text>
+                      <Text style={styles.linkedAddress}>{hospital.address}</Text>
+                      <Text style={styles.linkedFee}>₹{hospital.consultationFee}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => removeLinkedHospital(hospital.hospitalId)}
+                      style={styles.removeBtn}
+                    >
+                      <X size={18} color={Colors.error} strokeWidth={2} />
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => removeLinkedHospital(hospital.hospitalId)}
-                    style={styles.removeBtn}
-                  >
-                    <X size={18} color={Colors.error} strokeWidth={2} />
-                  </TouchableOpacity>
+                  {hospital.isPrimary && (
+                    <View style={styles.primaryBadge}>
+                      <Text style={styles.primaryText}>Primary Hospital</Text>
+                    </View>
+                  )}
+                  {/* Availability Builder */}
+                  <AvailabilityBuilder
+                    hospitalName={hospital.hospitalName}
+                    availability={hospital.availability}
+                    onChange={(avail) => updateHospitalAvailability(hospital.hospitalId, avail)}
+                    crossHospitalBusy={crossHospitalBusy}
+                  />
                 </View>
-                {hospital.isPrimary && (
-                  <View style={styles.primaryBadge}>
-                    <Text style={styles.primaryText}>Primary Hospital</Text>
-                  </View>
-                )}
-                {/* Availability Builder */}
-                <AvailabilityBuilder
-                  hospitalName={hospital.hospitalName}
-                  availability={hospital.availability}
-                  onChange={(avail) => updateHospitalAvailability(hospital.hospitalId, avail)}
-                />
+              );
+            })}
+
+            {/* Footer CTA — explicit signal that more hospitals can be linked. */}
+            <TouchableOpacity
+              style={styles.linkAnotherBtn}
+              onPress={focusSearch}
+              activeOpacity={0.8}
+            >
+              <View style={styles.linkAnotherIcon}>
+                <Plus size={16} color={Colors.primary} strokeWidth={2.5} />
               </View>
-            ))}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.linkAnotherTitle}>Link Another Hospital</Text>
+                <Text style={styles.linkAnotherSub}>
+                  Tap to search and add another hospital you practice at.
+                </Text>
+              </View>
+            </TouchableOpacity>
           </>
         )}
 
@@ -315,6 +409,31 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.text, marginBottom: 10 },
+  sectionHint: { fontSize: 12, color: Colors.textSecondary, marginBottom: 10, marginTop: -4 },
+  linkedHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  linkedListHint: { fontSize: 12, color: Colors.textSecondary, marginBottom: 12 },
+  linkAnotherBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + '55',
+    borderStyle: 'dashed',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  linkAnotherIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: Colors.primary + '40',
+  },
+  linkAnotherTitle: { fontSize: 14, fontWeight: '800', color: Colors.primary },
+  linkAnotherSub: { fontSize: 12, color: Colors.primary, opacity: 0.75, marginTop: 1 },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14,
@@ -333,6 +452,40 @@ const styles = StyleSheet.create({
   ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#FFF8E7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   ratingText: { fontSize: 12, fontWeight: '700', color: '#D97706' },
   searchingText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', paddingVertical: 8 },
+  emptyMatch: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: 6,
+    marginBottom: 10,
+  },
+  emptyMatchTitle: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  emptyMatchHint: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
+  addHospitalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  addHospitalIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: Colors.primary + '40',
+  },
+  addHospitalTitle: { fontSize: 14, fontWeight: '800', color: Colors.primary },
+  addHospitalSub: { fontSize: 12, color: Colors.primary, opacity: 0.7, marginTop: 1 },
   linkedCard: {
     backgroundColor: Colors.white, borderRadius: 16, padding: 16,
     marginBottom: 16, borderWidth: 1, borderColor: Colors.borderLight,

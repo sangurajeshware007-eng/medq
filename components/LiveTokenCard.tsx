@@ -4,6 +4,7 @@ import { Radio, PartyPopper, Clock } from 'lucide-react-native';
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
 import { crossPlatformShadow } from '../utils/shadow';
+import LocalizedName from './LocalizedName';
 
 interface LiveTokenCardProps {
   currentToken: number;
@@ -31,7 +32,7 @@ export default function LiveTokenCard({
         <Text style={styles.headerTitle}>LIVE TOKEN TRACKER</Text>
       </View>
 
-      <Text style={styles.doctorName}>{doctorName}</Text>
+      <LocalizedName name={doctorName} style={styles.doctorName} />
 
       {/* Current Token — HUGE & Glowing */}
       <View style={styles.tokenSection}>

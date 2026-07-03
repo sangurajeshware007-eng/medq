@@ -1,18 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { useScrollToTop, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import * as ExpoLocation from 'expo-location';
+import { useRouter } from 'expo-router';
 import {
   Stethoscope,
   MapPin,
@@ -28,36 +18,49 @@ import {
   ChevronRight,
   Hand,
 } from 'lucide-react-native';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // expo-location v19 exports reverseGeocodeAsync but type declarations may be incomplete
 const Location = ExpoLocation as typeof ExpoLocation & {
-  reverseGeocodeAsync: (location: { latitude: number; longitude: number }) => Promise<Array<{
-    city?: string | null;
-    subregion?: string | null;
-    name?: string | null;
-    street?: string | null;
-    region?: string | null;
-  }>>;
+  reverseGeocodeAsync: (location: { latitude: number; longitude: number }) => Promise<
+    Array<{
+      city?: string | null;
+      subregion?: string | null;
+      name?: string | null;
+      street?: string | null;
+      region?: string | null;
+    }>
+  >;
 };
-import { Colors } from '../../constants/Colors';
-import { useLanguage } from '../../context/LanguageContext';
-import { useLocation } from '../../context/LocationContext';
-import { useAuth } from '../../context/AuthContext';
-import { crossPlatformShadow } from '../../utils/shadow';
+import AdminDashboard from '../../components/dashboard/AdminDashboard';
+import HospitalManagerDashboard from '../../components/dashboard/HospitalManagerDashboard';
+import QuickActions from '../../components/home/QuickActions';
+import WelcomeHero from '../../components/home/WelcomeHero';
+import HospitalCard from '../../components/HospitalCard';
 import LanguageToggle from '../../components/LanguageToggle';
 import LogoHeader from '../../components/LogoHeader';
-import { formatShortCredential } from '../../utils/doctorCredential';
-import { useNearbyHospitals, useNearbyDoctors } from '../../hooks/useApiHooks';
-import HospitalCard from '../../components/HospitalCard';
+import PremiumDoctorCard from '../../components/PremiumDoctorCard';
+import { Colors } from '../../constants/Colors';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useLocation } from '../../context/LocationContext';
+import { crossPlatformShadow } from '../../utils/shadow';
+import { useNearbyHospitals, useNearbyDoctors, useNearbyCityImages } from '../../hooks/useApiHooks';
 import type { DoctorListItem } from '../../services/doctorService';
 import type { HospitalListItem } from '../../services/hospitalService';
-import PremiumDoctorCard from '../../components/PremiumDoctorCard';
-import DoctorDashboard from '../../components/dashboard/DoctorDashboard';
-import HospitalManagerDashboard from '../../components/dashboard/HospitalManagerDashboard';
-import AdminDashboard from '../../components/dashboard/AdminDashboard';
+import { formatShortCredential } from '../../utils/doctorCredential';
 
 const RADIUS_KM = 50;
-
 
 export default function HomeScreen() {
   const { t } = useLanguage();
@@ -69,9 +72,11 @@ export default function HomeScreen() {
   const [gpsCoords, setGpsCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState(false);
 
-  // ── Auto-detect GPS location on mount ──────────────────────────────
+  // ── Auto-detect GPS location on mount (skip if user already has a location) ──
   useEffect(() => {
-    detectLocation();
+    if (!selectedLocation) {
+      detectLocation();
+    }
   }, []);
 
   // If selectedLocation changes (user picks from location-picker), use that
@@ -163,15 +168,42 @@ export default function HomeScreen() {
   }, [refetchHospitals, refetchDoctors]);
 
   // ── Derived data ───────────────────────────────────────────────────
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
+
+  // Explicit tabPress listener — guarantees scroll-to-top when the Home tab
+  // icon is tapped while already on Home. (useScrollToTop alone isn't reliable
+  // across Expo Router + Tabs nesting.)
+  const navigation = useNavigation();
+  useEffect(() => {
+    const parent = navigation.getParent();
+    if (!parent) return;
+    const unsubscribe = parent.addListener('tabPress' as never, () => {
+      if (navigation.isFocused()) {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const isLoading = detecting || hospitalsLoading || doctorsLoading;
   const hospitalsList: HospitalListItem[] = nearbyHospitals ?? [];
   const doctorsList: DoctorListItem[] = nearbyDoctors ?? [];
 
+  const shuffledDoctors = useMemo(() => {
+    const arr = [...doctorsList];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [doctorsList]);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return t('goodMorning');
+    if (hour < 17) return t('goodAfternoon');
+    return t('goodEvening');
   };
 
   const getGreetingIcon = () => {
@@ -183,16 +215,27 @@ export default function HomeScreen() {
 
   const userName = user?.name?.split(' ')[0] || t('welcomeMsg');
 
+  // City-specific landmark background(s) for the welcome hero. The /nearby
+  // endpoint returns every image whose coverage area (lat/lng + radius_km)
+  // contains the user's current position, sorted by distance ascending.
+  // When multiple match (overlapping coverage), the hero auto-cycles through
+  // them every 5 s. Empty list = fall back to the default teal gradient.
+  const heroLat = selectedLocation?.latitude ?? gpsCoords?.latitude;
+  const heroLng = selectedLocation?.longitude ?? gpsCoords?.longitude;
+  const { data: cityImages } = useNearbyCityImages(heroLat, heroLng);
+  const heroBackgroundImages = useMemo(
+    () =>
+      (cityImages ?? []).map((c) => ({
+        imageUrl: c.imageUrl,
+        caption: c.caption,
+      })),
+    [cityImages],
+  );
+
   // ── Role-based dashboard routing ───────────────────────────────────────
   // All hooks have been called above — safe to branch here.
-  if (user?.role === 'DOCTOR') {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <LogoHeader />
-        <DoctorDashboard />
-      </SafeAreaView>
-    );
-  }
+  // Doctors use the dedicated /(tabs)/dashboard tab; the Home tab shows the
+  // same patient-style hub (hospitals, nearby doctors, search) for everyone.
 
   if (user?.role === 'HOSPITAL_MANAGER') {
     return (
@@ -215,6 +258,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
@@ -223,63 +267,43 @@ export default function HomeScreen() {
         {/* Header */}
         <LogoHeader />
 
-        {/* Welcome Banner (personalized) */}
-        <View style={styles.welcomeBanner}>
-          <View style={styles.welcomeContent}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              {getGreetingIcon()}
-              <Text style={styles.welcomeGreeting}>{getGreeting()}</Text>
-            </View>
-            <Text style={styles.welcomeTitle}>
-              {isLoggedIn ? `${userName}!` : t('welcomeMsg')}
-            </Text>
-            <Text style={styles.welcomeSub}>
-              {isLoggedIn
-                ? `Showing doctors & hospitals within ${RADIUS_KM}km`
-                : t('appTagline')
-              }
-            </Text>
-            <TouchableOpacity
-              style={styles.welcomeBtn}
-              onPress={() => router.push('/(tabs)/search')}
-            >
-              <Search size={14} color={Colors.white} strokeWidth={2.5} />
-              <Text style={styles.welcomeBtnText}>{t('search')} {t('topDoctors')}</Text>
-            </TouchableOpacity>
-          </View>
-          <UserRound size={56} color="rgba(255,255,255,0.3)" strokeWidth={1.5} />
-        </View>
+        {/* Brand-led greeting hero (replaces the old solid welcome banner) */}
+        <WelcomeHero
+          userName={userName}
+          isLoggedIn={isLoggedIn}
+          tagline={
+            isLoggedIn
+              ? `Find doctors and hospitals within ${RADIUS_KM} km of you`
+              : t('appTagline')
+          }
+          hospitalsCount={hospitalsList.length || undefined}
+          doctorsCount={doctorsList.length || undefined}
+          searchPlaceholder={`${t('search')} ${t('topDoctors').toLowerCase()}…`}
+          onSearchPress={() => router.push('/(tabs)/search')}
+          backgroundImages={heroBackgroundImages}
+        />
 
-        {/* Near Me Banner */}
-        <TouchableOpacity
-          style={styles.nearMeBanner}
-          onPress={() => router.push({
-            pathname: '/nearme',
-            params: gpsCoords
-              ? { lat: String(gpsCoords.latitude), lng: String(gpsCoords.longitude) }
-              : {},
-          })}
-          activeOpacity={0.8}
-        >
-          <Map size={24} color={Colors.primary} strokeWidth={2} />
-          <View style={styles.nearMeTextWrap}>
-            <Text style={styles.nearMeTitle}>{t('nearMe')}</Text>
-            <Text style={styles.nearMeSubtitle}>
-              {gpsCoords
-                ? `${t('nearbyDoctors')} (${RADIUS_KM}km)`
-                : t('nearbyDoctors')
-              }
-            </Text>
-          </View>
-          <ChevronRight size={20} color={Colors.primary} strokeWidth={2} />
-        </TouchableOpacity>
+        {/* Quick action grid */}
+        <QuickActions
+          onFindDoctor={() => router.push('/(tabs)/search')}
+          onNearMe={() =>
+            router.push({
+              pathname: '/nearme',
+              params: gpsCoords
+                ? { lat: String(gpsCoords.latitude), lng: String(gpsCoords.longitude) }
+                : {},
+            })
+          }
+          onMyBookings={() => router.push('/(tabs)/booking')}
+          onEmergency={() => router.push('/(tabs)/search')}
+        />
 
         {/* Loading State */}
         {isLoading && !refreshing && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>
-              {detecting ? 'Detecting your location...' : 'Finding doctors near you...'}
+              {detecting ? t('detectingYourLocation') : t('findingDoctorsNearYou')}
             </Text>
           </View>
         )}
@@ -292,12 +316,20 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitle}>{t('nearbyHospitals')}</Text>
             </View>
             {hospitalsList.length > 0 && (
-              <TouchableOpacity onPress={() => router.push({
-                pathname: '/nearme',
-                params: gpsCoords
-                  ? { lat: String(gpsCoords.latitude), lng: String(gpsCoords.longitude), tab: 'hospitals' }
-                  : { tab: 'hospitals' },
-              })}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: '/nearme',
+                    params: gpsCoords
+                      ? {
+                          lat: String(gpsCoords.latitude),
+                          lng: String(gpsCoords.longitude),
+                          tab: 'hospitals',
+                        }
+                      : { tab: 'hospitals' },
+                  })
+                }
+              >
                 <Text style={styles.seeAll}>{t('seeAll')} →</Text>
               </TouchableOpacity>
             )}
@@ -306,15 +338,15 @@ export default function HomeScreen() {
           {hospitalsError && !hospitalsLoading && (
             <View style={styles.errorCard}>
               <AlertTriangle size={18} color={Colors.error} strokeWidth={2} />
-              <Text style={styles.errorText}>Unable to load hospitals. Pull down to retry.</Text>
+              <Text style={styles.errorText}>{t('unableToLoadHospitals')}</Text>
             </View>
           )}
 
           {!hospitalsLoading && !hospitalsError && hospitalsList.length === 0 && !detecting && (
             <View style={styles.emptyCard}>
               <Hospital size={36} color={Colors.textLight} strokeWidth={1.5} />
-              <Text style={styles.emptyTitle}>No hospitals found nearby</Text>
-              <Text style={styles.emptySubtitle}>Try changing your location or increasing the search area</Text>
+              <Text style={styles.emptyTitle}>{t('noHospitalsNearby')}</Text>
+              <Text style={styles.emptySubtitle}>{t('tryWiderLocation')}</Text>
             </View>
           )}
 
@@ -323,7 +355,7 @@ export default function HomeScreen() {
               data={hospitalsList}
               horizontal
               showsHorizontalScrollIndicator={false}
-              keyExtractor={item => String(item.id)}
+              keyExtractor={(item) => String(item.id)}
               estimatedItemSize={178}
               contentContainerStyle={styles.horizontalList}
               renderItem={({ item }) => (
@@ -333,7 +365,9 @@ export default function HomeScreen() {
                   distance={item.distance || ''}
                   rating={item.rating}
                   doctorsCount={item.doctorsCount}
-                  onPress={() => router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })}
+                  onPress={() =>
+                    router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
+                  }
                 />
               )}
             />
@@ -357,21 +391,21 @@ export default function HomeScreen() {
           {doctorsError && !doctorsLoading && (
             <View style={styles.errorCard}>
               <AlertTriangle size={18} color={Colors.error} strokeWidth={2} />
-              <Text style={styles.errorText}>Unable to load doctors. Pull down to retry.</Text>
+              <Text style={styles.errorText}>{t('unableToLoadDoctors')}</Text>
             </View>
           )}
 
-          {!doctorsLoading && !doctorsError && doctorsList.length === 0 && !detecting && (
+          {!doctorsLoading && !doctorsError && shuffledDoctors.length === 0 && !detecting && (
             <View style={styles.emptyCard}>
               <UserRound size={36} color={Colors.textLight} strokeWidth={1.5} />
-              <Text style={styles.emptyTitle}>No doctors found nearby</Text>
-              <Text style={styles.emptySubtitle}>Try changing your location or searching by specialization</Text>
+              <Text style={styles.emptyTitle}>{t('noDoctorsNearby')}</Text>
+              <Text style={styles.emptySubtitle}>{t('tryChangeLocationOrSpec')}</Text>
             </View>
           )}
 
-          {doctorsList.length > 0 && (
+          {shuffledDoctors.length > 0 && (
             <FlashList
-              data={doctorsList.slice(0, 6)}
+              data={shuffledDoctors.slice(0, 6)}
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => String(item.id)}
@@ -380,7 +414,9 @@ export default function HomeScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.compactDoctorCard}
-                  onPress={() => router.push({ pathname: '/doctor/[id]', params: { id: String(item.id) } })}
+                  onPress={() =>
+                    router.push({ pathname: '/doctor/[id]', params: { id: String(item.id) } })
+                  }
                   activeOpacity={0.8}
                 >
                   <Image
@@ -394,15 +430,21 @@ export default function HomeScreen() {
                       <Text style={styles.compactVerifiedIcon}>✓</Text>
                     </View>
                   )}
-                  <Text style={styles.compactName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.compactSpec} numberOfLines={1}>{item.specialization}</Text>
+                  <Text style={styles.compactName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.compactSpec} numberOfLines={1}>
+                    {item.specialization}
+                  </Text>
                   <View style={styles.compactRatingRow}>
                     {/* Phase 1: qualification instead of rating */}
                     {/* <Text style={styles.compactStar}>★</Text>
                     <Text style={styles.compactRating}>{item.rating}</Text> */}
                     {formatShortCredential(item.degree) !== '' ? (
                       <>
-                        <Text style={styles.compactRating} numberOfLines={1}>{formatShortCredential(item.degree)}</Text>
+                        <Text style={styles.compactRating} numberOfLines={1}>
+                          {formatShortCredential(item.degree)}
+                        </Text>
                         <Text style={styles.compactExp}> · {item.experience}yr</Text>
                       </>
                     ) : (
@@ -410,14 +452,22 @@ export default function HomeScreen() {
                     )}
                   </View>
                   {item.distanceKm != null && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
+                    <View
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}
+                    >
                       <MapPin size={10} color={Colors.textSecondary} strokeWidth={2.5} />
-                      <Text style={styles.compactHospital} numberOfLines={1}>{item.distanceKm.toFixed(1)} km</Text>
+                      <Text style={styles.compactHospital} numberOfLines={1}>
+                        {item.distanceKm.toFixed(1)} km
+                      </Text>
                     </View>
                   )}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
+                  <View
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}
+                  >
                     <Hospital size={10} color={Colors.textSecondary} strokeWidth={2} />
-                    <Text style={styles.compactHospital} numberOfLines={1}>{item.hospitalName}</Text>
+                    <Text style={styles.compactHospital} numberOfLines={1}>
+                      {item.hospitalName}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -426,17 +476,21 @@ export default function HomeScreen() {
         </View>
 
         {/* All Doctors Near You (vertical list) */}
-        {doctorsList.length > 0 && (
+        {shuffledDoctors.length > 0 && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
               <Stethoscope size={18} color={Colors.primary} strokeWidth={2} />
-              <Text style={styles.sectionTitle}>{t('topDoctors')} — {displayName}</Text>
+              <Text style={styles.sectionTitle}>
+                {t('topDoctors')} — {displayName}
+              </Text>
             </View>
-            {doctorsList.map((doctor) => (
+            {shuffledDoctors.map((doctor) => (
               <PremiumDoctorCard
                 key={doctor.id}
                 doctor={doctor}
-                onPress={() => router.push({ pathname: '/doctor/[id]', params: { id: String(doctor.id) } })}
+                onPress={() =>
+                  router.push({ pathname: '/doctor/[id]', params: { id: String(doctor.id) } })
+                }
                 style={styles.fullDoctorCard}
                 variant="full"
               />
@@ -461,7 +515,13 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 4, opacity: 0.08, radius: 16, elevation: 5 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 4,
+      opacity: 0.08,
+      radius: 16,
+      elevation: 5,
+    }),
   },
   headerTop: {
     flexDirection: 'row',
@@ -518,7 +578,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 22,
     padding: 20,
-    ...crossPlatformShadow({ color: Colors.primaryDark, offsetY: 8, opacity: 0.3, radius: 20, elevation: 10 }),
+    ...crossPlatformShadow({
+      color: Colors.primaryDark,
+      offsetY: 8,
+      opacity: 0.3,
+      radius: 20,
+      elevation: 10,
+    }),
   },
   welcomeContent: {
     flex: 1,
@@ -568,7 +634,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 4, opacity: 0.06, radius: 12, elevation: 3 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 4,
+      opacity: 0.06,
+      radius: 12,
+      elevation: 3,
+    }),
   },
   nearMeIcon: {
     fontSize: 28,
@@ -629,7 +701,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 2, opacity: 0.06, radius: 8, elevation: 2 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 2,
+      opacity: 0.06,
+      radius: 8,
+      elevation: 2,
+    }),
   },
   emptyIcon: {
     fontSize: 40,
@@ -682,7 +760,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginRight: 14,
     overflow: 'hidden',
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 6, opacity: 0.15, radius: 16, elevation: 6 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 6,
+      opacity: 0.15,
+      radius: 16,
+      elevation: 6,
+    }),
   },
   hospitalImage: {
     width: '100%',
@@ -752,7 +836,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 4, opacity: 0.1, radius: 12, elevation: 5 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 4,
+      opacity: 0.1,
+      radius: 12,
+      elevation: 5,
+    }),
   },
   compactImageWrap: {
     position: 'relative',
@@ -820,15 +910,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   // ─── Full Doctor Card (vertical) ────────────────────
+  // Don't override layout properties from PremiumDoctorCard's own `cardFull`
+  // style — adding `flexDirection: 'row'` and `padding: 14` here caused the
+  // outer wrapper to shrink-wrap, leaving dead space on the right. The card's
+  // internal padding (topRow/bottomRow) already handles spacing.
   fullDoctorCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 18,
-    padding: 14,
-    flexDirection: 'row',
+    alignSelf: 'stretch',
+    marginHorizontal: 0,
     marginBottom: 14,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 4, opacity: 0.12, radius: 16, elevation: 6 }),
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   fullImageSection: {
     marginRight: 12,

@@ -6,7 +6,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
   Image, ActivityIndicator, TextInput, Modal, FlatList,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   ChevronLeft, Camera, Plus, Trash2, ChevronDown,
-  Check, Clock, Building2, BookOpen, Award, Zap, Lock, ArrowRight,
+  Check, Building2, BookOpen, Award, Zap, Lock, ArrowRight,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -32,6 +32,8 @@ import doctorService, {
 import storageService from '../../services/storageService';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import AvailabilityBuilder from '../../components/onboarding/AvailabilityBuilder';
+import type { DayAvailability, SessionEntry } from '../../store/doctorOnboardingStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -49,12 +51,8 @@ const LANGUAGES = [
   'Marathi', 'Bengali', 'Gujarati', 'Malayalam', 'Urdu',
 ];
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const DAY_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const SESSION_TYPES = ['OPD', 'SURGERY', 'EMERGENCY', 'TELE'];
-
 const PRESET_SERVICES = [
-  'ECG', 'Echo', 'Angioplasty', 'Tele-consultation', 'Surgery',
+  'ECG', 'Echo', 'Angioplasty', 'Surgery',
   'X-Ray', 'MRI', 'Blood Test', 'Physiotherapy', 'Ultrasound',
 ];
 const PRESET_CONDITIONS = [
@@ -79,8 +77,6 @@ export default function DoctorEditProfile() {
   const [specSearch, setSpecSearch] = useState('');
   const [gender, setGender] = useState('');
   const [consultationFee, setConsultationFee] = useState('');
-  const [teleAvailable, setTeleAvailable] = useState(false);
-  const [teleFee, setTeleFee] = useState('');
   const [bio, setBio] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
   const [practiceYear, setPracticeYear] = useState('');
@@ -91,8 +87,14 @@ export default function DoctorEditProfile() {
 
   // ── Availability tab state
   const [slots, setSlots] = useState<SelfAvailabilitySlot[]>([]);
-  const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | undefined>(undefined);
+
+  // Tracks days the user has toggled ON in the AvailabilityBuilder but
+  // hasn't added a session for yet. The backend only stores sessions, so a
+  // day with zero sessions has nothing in `slots` — without this we'd lose
+  // the chip's "active" state on the very next re-render.
+  // Keyed by hospitalId so each hospital tab has its own pending set.
+  const [emptyActiveDaysByHospital, setEmptyActiveDaysByHospital] = useState<Record<string, string[]>>({});
 
   // ── Details tab state
   const [qualifications, setQualifications] = useState<SelfQualification[]>([]);
@@ -130,8 +132,6 @@ export default function DoctorEditProfile() {
     setSpecialization(data.specialization);
     setGender(data.gender ?? '');
     setConsultationFee(String(data.consultationFee));
-    setTeleAvailable(data.isTeleAvailable);
-    setTeleFee(data.teleFee != null ? String(data.teleFee) : '');
     setBio(data.bio ?? '');
     setClinicAddress(data.clinicAddress ?? '');
     setAvatarUrl(data.avatarUrl ?? '');
@@ -190,8 +190,6 @@ export default function DoctorEditProfile() {
         specialization: specialization || undefined,
         gender: gender || undefined,
         consultationFee: Number(consultationFee),
-        isTeleAvailable: teleAvailable,
-        teleFee: teleAvailable && teleFee ? Number(teleFee) : undefined,
         bio: bio || undefined,
         clinicAddress: clinicAddress || undefined,
         languagesSpoken: languages,
@@ -263,47 +261,94 @@ export default function DoctorEditProfile() {
   };
 
   // ─── Availability helpers ─────────────────────────────────────────────
+  // The backend stores availability as a flat list keyed by (dayOfWeek, hospitalId).
+  // The shared AvailabilityBuilder component (also used in onboarding) works with
+  // a per-hospital, per-day grouped shape. These helpers convert between them so we
+  // can render the same UI here as in onboarding.
 
-  const daySlots = useMemo(
-    () => slots.filter((s) =>
-      s.dayOfWeek === selectedDay &&
-      (!selectedHospitalId || s.hospitalId === selectedHospitalId || !s.hospitalId),
-    ),
-    [slots, selectedDay, selectedHospitalId],
-  );
+  const DAY_NUM_TO_CODE = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const DAY_CODE_TO_NUM: Record<string, number> = {
+    SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6,
+  };
 
-  const addSlot = () => {
-    setSlots((prev) => [
-      ...prev,
-      {
-        dayOfWeek: selectedDay,
-        sessionName: 'Morning OPD',
-        sessionType: 'OPD',
-        startTime: '09:00',
-        endTime: '13:00',
-        slotDurationMinutes: 15,
-        maxPatientsPerSlot: 1,
+  /** Group flat slots for the currently selected hospital into DayAvailability[]. */
+  const builderAvailability = useMemo<DayAvailability[]>(() => {
+    const filtered = slots.filter((s) =>
+      !selectedHospitalId || s.hospitalId === selectedHospitalId || !s.hospitalId
+    );
+    const byDay: Record<string, SessionEntry[]> = {};
+    filtered.forEach((s) => {
+      const code = DAY_NUM_TO_CODE[s.dayOfWeek];
+      if (!code) return;
+      (byDay[code] ??= []).push({
+        sessionName: s.sessionName,
+        sessionType: s.sessionType,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        slotDurationMinutes: s.slotDurationMinutes,
+        maxPatientsPerSlot: s.maxPatientsPerSlot,
+      });
+    });
+    // Merge in days the user just activated but hasn't added a session for
+    // yet — without this, the chip flips back to inactive on next render.
+    const emptyDays = emptyActiveDaysByHospital[selectedHospitalId ?? ''] ?? [];
+    emptyDays.forEach((d) => {
+      if (!byDay[d]) byDay[d] = [];
+    });
+    return Object.entries(byDay).map(([day, sessions]) => ({ day, sessions }));
+  }, [slots, selectedHospitalId, emptyActiveDaysByHospital]);
+
+  /**
+   * Sessions the doctor already has at OTHER hospitals for the same weekday.
+   * Feeds AvailabilityBuilder's cross-hospital overlap check so the doctor
+   * can't schedule themselves at two places at the same time.
+   */
+  const crossHospitalBusy = useMemo<Record<string, { hospitalName: string; sessionName: string; startTime: string; endTime: string }[]>>(() => {
+    if (!profile) return {};
+    const hospitalNameById = new Map(profile.hospitals.map((h) => [h.hospitalId, h.hospitalName]));
+    const grouped: Record<string, { hospitalName: string; sessionName: string; startTime: string; endTime: string }[]> = {};
+    slots.forEach((s) => {
+      if (!s.hospitalId || s.hospitalId === selectedHospitalId) return;
+      const code = DAY_NUM_TO_CODE[s.dayOfWeek];
+      if (!code) return;
+      (grouped[code] ??= []).push({
+        hospitalName: hospitalNameById.get(s.hospitalId) ?? 'another hospital',
+        sessionName: s.sessionName,
+        startTime: s.startTime,
+        endTime: s.endTime,
+      });
+    });
+    return grouped;
+  }, [slots, selectedHospitalId, profile]);
+
+  /** Replace the selected hospital's slots with the builder's grouped output. */
+  const handleAvailabilityChange = (next: DayAvailability[]) => {
+    const otherHospitalSlots = slots.filter(
+      (s) => selectedHospitalId && s.hospitalId !== selectedHospitalId && !!s.hospitalId,
+    );
+    const newSlotsForHospital: SelfAvailabilitySlot[] = next.flatMap((day) =>
+      day.sessions.map((s) => ({
+        dayOfWeek: DAY_CODE_TO_NUM[day.day] ?? 1,
+        sessionName: s.sessionName,
+        sessionType: s.sessionType,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        slotDurationMinutes: s.slotDurationMinutes,
+        maxPatientsPerSlot: s.maxPatientsPerSlot,
         isAvailable: true,
         hospitalId: selectedHospitalId,
-      },
-    ]);
-  };
+      })),
+    );
+    setSlots([...otherHospitalSlots, ...newSlotsForHospital]);
 
-  const updateSlot = (idx: number, key: keyof SelfAvailabilitySlot, value: any) => {
-    setSlots((prev) => {
-      const all = [...prev];
-      const targetIdx = all.findIndex(
-        (s, i) => s.dayOfWeek === selectedDay && i === prev.indexOf(daySlots[idx]),
-      );
-      if (targetIdx < 0) return prev;
-      all[targetIdx] = { ...all[targetIdx], [key]: value };
-      return all;
-    });
-  };
-
-  const removeSlot = (daySlotIdx: number) => {
-    const target = daySlots[daySlotIdx];
-    setSlots((prev) => prev.filter((s) => s !== target));
+    // Remember days that are "active but empty" so the chip stays selected
+    // until the user either adds a session (which puts the day into `slots`)
+    // or toggles it off again.
+    const emptyDays = next.filter((d) => d.sessions.length === 0).map((d) => d.day);
+    setEmptyActiveDaysByHospital((prev) => ({
+      ...prev,
+      [selectedHospitalId ?? '']: emptyDays,
+    }));
   };
 
   // ─── Details helpers ──────────────────────────────────────────────────
@@ -334,7 +379,7 @@ export default function DoctorEditProfile() {
 
   if (!profile && !loadError) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.centerLoader}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading profile...</Text>
@@ -345,7 +390,7 @@ export default function DoctorEditProfile() {
 
   if (loadError) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.centerLoader}>
           <Text style={styles.errorText}>{loadError}</Text>
           <Button title="Retry" onPress={loadProfile} style={{ marginTop: 16 }} />
@@ -355,7 +400,7 @@ export default function DoctorEditProfile() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -450,25 +495,6 @@ export default function DoctorEditProfile() {
               keyboardType="numeric"
               placeholder="e.g. 500"
             />
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Tele-consultation available</Text>
-              <Switch
-                value={teleAvailable}
-                onValueChange={setTeleAvailable}
-                trackColor={{ true: Colors.primary, false: Colors.border }}
-                thumbColor={Colors.white}
-              />
-            </View>
-            {teleAvailable && (
-              <Input
-                label="Tele-consultation Fee (₹)"
-                value={teleFee}
-                onChangeText={(v) => setTeleFee(v.replace(/[^0-9]/g, ''))}
-                keyboardType="numeric"
-                placeholder="e.g. 300"
-              />
-            )}
 
             {/* Bio */}
             <Input
@@ -580,121 +606,17 @@ export default function DoctorEditProfile() {
             </>
           )}
 
-          {/* Day picker */}
-          <Text style={styles.sectionLabel}>Day</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayScroll}>
-            {DAY_LABELS.map((day, idx) => {
-              const hasSlots = slots.some((s) => s.dayOfWeek === idx);
-              return (
-                <TouchableOpacity
-                  key={day}
-                  style={[styles.dayBtn, selectedDay === idx && styles.dayBtnActive]}
-                  onPress={() => setSelectedDay(idx)}
-                >
-                  <Text style={[styles.dayBtnText, selectedDay === idx && styles.dayBtnTextActive]}>
-                    {day}
-                  </Text>
-                  {hasSlots && <View style={[styles.dayDot, selectedDay === idx && styles.dayDotActive]} />}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          <Text style={styles.dayHeader}>{DAY_FULL[selectedDay]} Sessions</Text>
-
-          {daySlots.length === 0 && (
-            <Text style={styles.emptySlots}>No sessions for {DAY_FULL[selectedDay]}</Text>
-          )}
-
-          {daySlots.map((slot, idx) => (
-            <View key={idx} style={styles.slotCard}>
-              <View style={styles.slotCardHeader}>
-                <Clock size={14} color={Colors.primary} strokeWidth={2} />
-                <Text style={styles.slotCardTitle}>Session {idx + 1}</Text>
-                <TouchableOpacity onPress={() => removeSlot(idx)} style={styles.slotRemoveBtn}>
-                  <Trash2 size={14} color={Colors.error} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-
-              <Input
-                label="Session Name"
-                value={slot.sessionName}
-                onChangeText={(v) => updateSlot(idx, 'sessionName', v)}
-                placeholder="e.g. Morning OPD"
-              />
-
-              {/* Session Type chips */}
-              <Text style={styles.fieldLabel}>Session Type</Text>
-              <View style={styles.pillRow}>
-                {SESSION_TYPES.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.pillSm, slot.sessionType === type && styles.pillActive]}
-                    onPress={() => updateSlot(idx, 'sessionType', type)}
-                  >
-                    <Text style={[styles.pillSmText, slot.sessionType === type && styles.pillTextActive]}>
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.timeRow}>
-                <View style={{ flex: 1 }}>
-                  <Input
-                    label="Start Time"
-                    value={slot.startTime}
-                    onChangeText={(v) => updateSlot(idx, 'startTime', v)}
-                    placeholder="09:00"
-                  />
-                </View>
-                <View style={{ width: 12 }} />
-                <View style={{ flex: 1 }}>
-                  <Input
-                    label="End Time"
-                    value={slot.endTime}
-                    onChangeText={(v) => updateSlot(idx, 'endTime', v)}
-                    placeholder="13:00"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.timeRow}>
-                <View style={{ flex: 1 }}>
-                  <Input
-                    label="Slot Duration (min)"
-                    value={String(slot.slotDurationMinutes)}
-                    onChangeText={(v) => updateSlot(idx, 'slotDurationMinutes', Number(v) || 15)}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={{ width: 12 }} />
-                <View style={{ flex: 1 }}>
-                  <Input
-                    label="Max Patients/Slot"
-                    value={String(slot.maxPatientsPerSlot)}
-                    onChangeText={(v) => updateSlot(idx, 'maxPatientsPerSlot', Number(v) || 1)}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Slot active</Text>
-                <Switch
-                  value={slot.isAvailable}
-                  onValueChange={(v) => updateSlot(idx, 'isAvailable', v)}
-                  trackColor={{ true: Colors.primary, false: Colors.border }}
-                  thumbColor={Colors.white}
-                />
-              </View>
-            </View>
-          ))}
-
-          <TouchableOpacity style={styles.addSlotBtn} onPress={addSlot}>
-            <Plus size={16} color={Colors.primary} strokeWidth={2.5} />
-            <Text style={styles.addSlotText}>Add Session for {DAY_LABELS[selectedDay]}</Text>
-          </TouchableOpacity>
+          {/* Same builder as the onboarding flow — toggle days, add/edit/copy sessions */}
+          <AvailabilityBuilder
+            hospitalName={
+              profile!.hospitals.find((h) => h.hospitalId === selectedHospitalId)?.hospitalName
+                ?? profile!.hospitals[0]?.hospitalName
+                ?? 'this hospital'
+            }
+            availability={builderAvailability}
+            onChange={handleAvailabilityChange}
+            crossHospitalBusy={crossHospitalBusy}
+          />
 
           <Button
             title="Save Availability"
@@ -881,7 +803,7 @@ export default function DoctorEditProfile() {
         presentationStyle="pageSheet"
         onRequestClose={() => { setShowSpecPicker(false); setSpecSearch(''); }}
       >
-        <SafeAreaView style={styles.modalContainer} edges={['top']}>
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Specialization</Text>
             <TouchableOpacity

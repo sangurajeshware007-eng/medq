@@ -79,7 +79,17 @@ export default function Button({
       ) : (
         <>
           {icon}
-          <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+          {/* numberOfLines={1} prevents the awkward "Book Appointme / nt" wrapping seen on
+              narrow phones (iPhone 12 / SE). adjustsFontSizeToFit gracefully shrinks the
+              label by up to 20% before truncating with an ellipsis. */}
+          <Text
+            style={[getTextStyle(), textStyle]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            {title}
+          </Text>
         </>
       )}
     </TouchableOpacity>

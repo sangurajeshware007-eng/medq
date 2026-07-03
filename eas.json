@@ -1,0 +1,50 @@
+{
+  "cli": {
+    "version": ">=10.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "local": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8080",
+        "EXPO_PUBLIC_ENV": "local"
+      }
+    },
+    "qa": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://178.105.36.248:8080",
+        "EXPO_PUBLIC_ENV": "qa"
+      }
+    },
+    "qa-testflight": {
+      "distribution": "store",
+      "ios": {
+        "simulator": false,
+        "autoIncrement": "buildNumber"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://178.105.36.248:8080",
+        "EXPO_PUBLIC_ENV": "qa"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.medreachplus.com",
+        "EXPO_PUBLIC_ENV": "production"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

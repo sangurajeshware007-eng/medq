@@ -316,8 +316,10 @@ export const doctorService = {
         };
     },
 
-    getAvailableSlots: async (id: string | number, date: string): Promise<AvailableSlotsResponse> => {
-        const raw = await api.get<any>(`${BASE}/${id}/available-slots`, { params: { date } });
+    getAvailableSlots: async (id: string | number, date: string, hospitalId?: string): Promise<AvailableSlotsResponse> => {
+        const params: Record<string, string> = { date };
+        if (hospitalId) params.hospitalId = hospitalId;
+        const raw = await api.get<any>(`${BASE}/${id}/available-slots`, { params });
         return {
             date: raw.date ?? date,
             doctorId: raw.doctorId,

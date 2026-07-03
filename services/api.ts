@@ -1,5 +1,5 @@
 /**
- * Core API client for MedReachPlus
+ * Core API client for MedQ+
  *
  * - Axios instance with base URL, timeout, content-type headers
  * - TokenManager: stores accessToken in-memory, refreshToken in AsyncStorage
