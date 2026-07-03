@@ -1,9 +1,12 @@
 /**
- * Phone Entry Screen — unified entry point for login and registration.
+ * Login Screen — unified entry point for login and registration.
  *
- * The user types their mobile number and taps "Send OTP".
+ * Google Sign-In is the primary method at launch. The phone/OTP entry is
+ * feature-flagged via ENV.enableOtpLogin and will be re-enabled once the
+ * OTP provider goes live — do not delete it.
+ *
  * The backend auto-detects new vs returning users — there is no separate
- * "login" / "register" split. OTP verification handles both.
+ * "login" / "register" split.
  */
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
@@ -21,20 +24,41 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import Button from '../../components/Button';
 import Input from '../../components/Input';
 import LanguageToggle from '../../components/LanguageToggle';
+import { getGoogleSigninButton } from '../../services/googleAuthService';
 import { phoneSchema, type PhoneFormValues } from '../../utils/authSchemas';
 
+import { ENV } from '@/config/environment';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 
 const BRAND_LOGO = require('../../assets/logo/new/logo-icon.png');
 
+// Null in binaries without the native module (Expo Go / stale dev build) —
+// we then fall back to the app's own Button, and sign-in reports a clear error.
+const GoogleSigninButton = getGoogleSigninButton();
+
 export default function PhoneEntryScreen() {
   const { t } = useLanguage();
-  const { sendOtp, loading } = useAuth();
+  const { sendOtp, signInWithGoogle, loading } = useAuth();
   const router = useRouter();
+  const [googleError, setGoogleError] = React.useState<string | null>(null);
+
+  const onGooglePress = async () => {
+    setGoogleError(null);
+    const result = await signInWithGoogle();
+    if (result.success && result.isNewUser) {
+      // New user: collect name/phone before entering the app.
+      router.push('/(auth)/complete-profile');
+    } else if (!result.success && !result.cancelled && result.error) {
+      setGoogleError(result.error);
+    }
+    // Returning user: setUser() flips isLoggedIn and the (auth) layout's
+    // <Redirect> takes over — never navigate to tabs imperatively.
+  };
 
   const {
     control,
@@ -85,49 +109,79 @@ export default function PhoneEntryScreen() {
 
           {/* Form */}
           <View style={styles.formSection}>
-            <Text style={styles.stepTitle}>{t('enterMobileNumber')}</Text>
-            <Text style={styles.stepDesc}>{t('loginDesc')}</Text>
+            {ENV.enableOtpLogin && (
+              <>
+                <Text style={styles.stepTitle}>{t('enterMobileNumber')}</Text>
+                <Text style={styles.stepDesc}>{t('loginDesc')}</Text>
 
-            <Controller
-              control={control}
-              name="phone"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.phoneRow}>
-                  <View style={styles.countryCode}>
-                    <Text style={styles.countryCodeText}>+91</Text>
-                  </View>
-                  <View style={styles.phoneInputWrapper}>
-                    <Input
-                      placeholder={t('mobileNumberPlaceholder')}
-                      value={value}
-                      onChangeText={(text) => {
-                        const next = text.replace(/[^0-9]/g, '').slice(0, 10);
-                        onChange(next);
-                        // Auto-send OTP as soon as 10 digits land — no button tap needed.
-                        if (
-                          next.length === 10 &&
-                          next !== lastAutoSubmittedRef.current &&
-                          !loading
-                        ) {
-                          lastAutoSubmittedRef.current = next;
-                          handleSubmit(onSubmit)();
-                        }
-                      }}
-                      keyboardType="phone-pad"
-                      maxLength={10}
-                      style={{ marginBottom: 0 }}
-                      error={errors.phone?.message}
-                      autoFocus
-                    />
-                  </View>
+                <Controller
+                  control={control}
+                  name="phone"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.phoneRow}>
+                      <View style={styles.countryCode}>
+                        <Text style={styles.countryCodeText}>+91</Text>
+                      </View>
+                      <View style={styles.phoneInputWrapper}>
+                        <Input
+                          placeholder={t('mobileNumberPlaceholder')}
+                          value={value}
+                          onChangeText={(text) => {
+                            const next = text.replace(/[^0-9]/g, '').slice(0, 10);
+                            onChange(next);
+                            // Auto-send OTP as soon as 10 digits land — no button tap needed.
+                            if (
+                              next.length === 10 &&
+                              next !== lastAutoSubmittedRef.current &&
+                              !loading
+                            ) {
+                              lastAutoSubmittedRef.current = next;
+                              handleSubmit(onSubmit)();
+                            }
+                          }}
+                          keyboardType="phone-pad"
+                          maxLength={10}
+                          style={{ marginBottom: 0 }}
+                          error={errors.phone?.message}
+                          autoFocus
+                        />
+                      </View>
+                    </View>
+                  )}
+                />
+
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
                 </View>
+              </>
+            )}
+
+            {/* Google Sign-In — the primary method at launch */}
+            <View style={styles.googleSection}>
+              {GoogleSigninButton ? (
+                <GoogleSigninButton
+                  size={GoogleSigninButton.Size.Wide}
+                  color={GoogleSigninButton.Color.Light}
+                  onPress={onGooglePress}
+                  disabled={loading}
+                />
+              ) : (
+                <Button
+                  title="Continue with Google"
+                  onPress={onGooglePress}
+                  disabled={loading}
+                  size="large"
+                />
               )}
-            />
+              {googleError && <Text style={styles.googleError}>{googleError}</Text>}
+            </View>
 
             {loading && (
               <View style={styles.sendingRow}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.sendingText}>{t('sendingOtp')}</Text>
+                {ENV.enableOtpLogin && <Text style={styles.sendingText}>{t('sendingOtp')}</Text>}
               </View>
             )}
 
@@ -164,6 +218,16 @@ const styles = StyleSheet.create({
   },
   countryCodeText: { fontSize: 15, fontWeight: '600', color: Colors.text },
   phoneInputWrapper: { flex: 1 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerText: { fontSize: 12, fontWeight: '600', color: Colors.textLight },
+  googleSection: { alignItems: 'center', gap: 8 },
+  googleError: {
+    fontSize: 13,
+    color: Colors.error,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   sendingRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -27,8 +27,15 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>medqplus</string>
           <string>medreachplus</string>
           <string>com.medreachplus</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.591757878637-phtrosqel0mmskv4aag38cnpa6lfbgje</string>
         </array>
       </dict>
     </array>
@@ -54,9 +61,11 @@
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <string>Allow MedQ+ to use the microphone for voice search.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your photos</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Allow MedQ+ to convert your speech to text so you can search by voice.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

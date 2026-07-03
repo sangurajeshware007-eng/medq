@@ -16,8 +16,9 @@
  *   POST /signup            → Register with phone + password
  *   POST /login             → Login with phone + password
  */
-import api, { TokenManager } from './api';
 import { API_URL } from '../config/environment';
+
+import api, { TokenManager } from './api';
 
 const BASE = '/api/v1/auth';
 
@@ -39,6 +40,8 @@ export interface CompleteProfileRequest {
   name: string;
   email?: string;
   preferredLanguage?: 'en' | 'hi' | 'kn';
+  /** Required for Google-created accounts (they sign in without a phone). */
+  phone?: string;
 }
 
 export interface AuthUser {
@@ -132,7 +135,8 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   const axiosErr = err as ApiErrorEnvelope;
   if (axiosErr.response?.data?.error?.message) return axiosErr.response.data.error.message;
   if (axiosErr.response?.data?.message) return axiosErr.response.data.message;
-  if (axiosErr.code === 'ERR_NETWORK') return 'Cannot reach server. Check your internet connection.';
+  if (axiosErr.code === 'ERR_NETWORK')
+    return 'Cannot reach server. Check your internet connection.';
   if (axiosErr.code === 'ECONNABORTED') return 'Request timed out. Please try again.';
   if (err instanceof Error) return err.message;
   return fallback;
@@ -154,6 +158,15 @@ async function authCall<T>(fn: () => Promise<T>, fallbackMsg: string): Promise<T
   }
 }
 
+/**
+ * Sentinel phones ("PENDING-…" for Google users mid-onboarding,
+ * "DELETED-…" for anonymized accounts) are not real numbers — hide them.
+ */
+export function displayPhone(phone?: string): string | null {
+  if (!phone || phone.startsWith('PENDING-') || phone.startsWith('DELETED-')) return null;
+  return phone;
+}
+
 /** Normalizes any phone input to +91XXXXXXXXXX */
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -165,7 +178,6 @@ export function normalizePhone(phone: string): string {
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export const authService = {
-
   // ── OTP flow ────────────────────────────────────────────────────────────────
 
   /**
@@ -199,10 +211,26 @@ export const authService = {
     return response;
   },
 
+  // ── Social (Google) flow ────────────────────────────────────────────────────
+
+  /**
+   * POST /api/v1/auth/social/google
+   * Exchanges a Google ID token for our JWT pair. Stores tokens on success.
+   * isNewUser=true → call completeProfile() with name + phone next.
+   */
+  googleLogin: async (idToken: string): Promise<AuthResponse> => {
+    const response = await authCall(
+      () => api.post<AuthResponse>(`${BASE}/social/google`, { idToken }),
+      'Unable to sign in with Google. Please try again.',
+    );
+    await TokenManager.setTokens(response.accessToken, response.refreshToken);
+    return response;
+  },
+
   /**
    * PUT /api/v1/auth/complete-profile
-   * Called once after a new user verifies their OTP.
-   * Requires auth (token stored from verifyOtp).
+   * Called once after a new user's first login (OTP or Google).
+   * Google users must include their phone. Requires auth.
    */
   completeProfile: (data: CompleteProfileRequest): Promise<UserProfile> =>
     authCall(

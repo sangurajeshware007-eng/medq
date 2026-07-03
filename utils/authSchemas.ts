@@ -24,15 +24,18 @@ export const otpSchema = z.object({
 });
 
 export const completeProfileSchema = z.object({
-  name: z
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
+  email: z.string().regex(emailRegex, 'Invalid email address').optional().or(z.literal('')),
+});
+
+// Google-created accounts sign in without a phone — complete-profile must
+// collect one. OTP users keep the phone-less schema above.
+export const completeProfileWithPhoneSchema = completeProfileSchema.extend({
+  phone: z
     .string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name is too long'),
-  email: z
-    .string()
-    .regex(emailRegex, 'Invalid email address')
-    .optional()
-    .or(z.literal('')),
+    .min(10, 'Enter 10-digit number')
+    .max(10, 'Enter 10-digit number')
+    .regex(phoneRegex, 'Invalid Indian mobile number'),
 });
 
 // ─── Password flow schemas (kept, used by admin/legacy screens) ───────────────
@@ -68,5 +71,6 @@ export const registerSchema = z
 export type PhoneFormValues = z.infer<typeof phoneSchema>;
 export type OtpFormValues = z.infer<typeof otpSchema>;
 export type CompleteProfileFormValues = z.infer<typeof completeProfileSchema>;
+export type CompleteProfileWithPhoneFormValues = z.infer<typeof completeProfileWithPhoneSchema>;
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type RegisterFormValues = z.infer<typeof registerSchema>;

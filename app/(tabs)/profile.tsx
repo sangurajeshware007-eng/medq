@@ -52,6 +52,7 @@ import {
   useHospitalOnboardingStatus,
   useDeactivateProfile,
 } from '../../hooks/useApiHooks';
+import { displayPhone } from '../../services/authService';
 import { crossPlatformShadow } from '../../utils/shadow';
 
 export default function ProfileScreen() {
@@ -211,7 +212,7 @@ export default function ProfileScreen() {
           <Text style={styles.userName}>{user?.name || name}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
             <Phone size={14} color={Colors.textSecondary} strokeWidth={2} />
-            <Text style={styles.userPhone}>{user?.phone || '9876543210'}</Text>
+            <Text style={styles.userPhone}>{displayPhone(user?.phone) || '—'}</Text>
           </View>
         </View>
 
@@ -251,7 +252,7 @@ export default function ProfileScreen() {
             <View style={styles.divider} />
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t('phone')}</Text>
-              <Text style={styles.infoValue}>{user?.phone || '—'}</Text>
+              <Text style={styles.infoValue}>{displayPhone(user?.phone) || '—'}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>

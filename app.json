@@ -4,7 +4,7 @@
     "slug": "medreachplus",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "medqplus",
+    "scheme": ["medqplus", "medreachplus"],
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "icon": "./assets/logo/new/app-icon.png",
@@ -55,7 +55,13 @@
           ]
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.591757878637-phtrosqel0mmskv4aag38cnpa6lfbgje"
+        }
+      ]
     ],
     "extra": {
       "router": {},

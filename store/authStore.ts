@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+
 import type { AuthUser } from '../services/authService';
 
 interface AuthState {
@@ -14,6 +15,10 @@ interface AuthState {
   pendingSessionId: string | null;
   pendingIsTestMode: boolean;
 
+  // ── Google flow — prefill for complete-profile after first sign-in ─────────
+  // Set when googleLogin returns isNewUser=true; cleared on completion/logout.
+  pendingSocialProfile: { name: string; email?: string } | null;
+
   // ── Actions ───────────────────────────────────────────────────────────────
   setUser: (user: AuthUser) => void;
   clearUser: () => void;
@@ -21,6 +26,8 @@ interface AuthState {
   setInitializing: (initializing: boolean) => void;
   setPendingOtp: (phone: string, sessionId: string, isTestMode: boolean) => void;
   clearPendingOtp: () => void;
+  setPendingSocialProfile: (profile: { name: string; email?: string }) => void;
+  clearPendingSocialProfile: () => void;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -33,8 +40,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
   pendingSessionId: null,
   pendingIsTestMode: false,
 
+  pendingSocialProfile: null,
+
   setUser: (user) => set({ user, isLoggedIn: true }),
-  clearUser: () => set({ user: null, isLoggedIn: false }),
+  clearUser: () => set({ user: null, isLoggedIn: false, pendingSocialProfile: null }),
   setLoading: (loading) => set({ loading }),
   setInitializing: (initializing) => set({ initializing }),
 
@@ -42,6 +51,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ pendingPhone: phone, pendingSessionId: sessionId, pendingIsTestMode: isTestMode }),
   clearPendingOtp: () =>
     set({ pendingPhone: null, pendingSessionId: null, pendingIsTestMode: false }),
+
+  setPendingSocialProfile: (profile) => set({ pendingSocialProfile: profile }),
+  clearPendingSocialProfile: () => set({ pendingSocialProfile: null }),
 }));
 
 /** Read auth state outside React (e.g. in Axios interceptors) */
