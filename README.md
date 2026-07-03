@@ -1,5 +1,9 @@
 # MedQ+ — React Native (Expo) Medical App
 
+> **New machine?** The full-stack local setup guide (backend + database +
+> Google Sign-In config + this app) lives in the backend repo:
+> [`medq-be/SETUP.md`](https://github.com/sangameshwarrr/medq-be/blob/main/SETUP.md)
+
 ## Quick Start
 
 ### First-time setup (native build — slow, ~2 min)
