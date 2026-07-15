@@ -21,8 +21,24 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://178.105.36.248:8080",
-        "EXPO_PUBLIC_ENV": "qa"
+        "EXPO_PUBLIC_API_URL": "https://medq-be-qa.up.railway.app",
+        "EXPO_PUBLIC_ENV": "qa",
+        "EXPO_PUBLIC_STORAGE_PUBLIC_URL": "https://pub-3c7beaf4b934497e84e54682370a24bf.r2.dev",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1069164250595-vhjj6j2r3jmane3e1p7e7e8cs53pmuon.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1069164250595-2jgevbp6u7og24urqgu2et5dhtpegdcg.apps.googleusercontent.com"
+      }
+    },
+    "qa-aab": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://medq-be-qa.up.railway.app",
+        "EXPO_PUBLIC_ENV": "qa",
+        "EXPO_PUBLIC_STORAGE_PUBLIC_URL": "https://pub-3c7beaf4b934497e84e54682370a24bf.r2.dev",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1069164250595-vhjj6j2r3jmane3e1p7e7e8cs53pmuon.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1069164250595-2jgevbp6u7og24urqgu2et5dhtpegdcg.apps.googleusercontent.com"
       }
     },
     "qa-testflight": {
@@ -32,15 +48,20 @@
         "autoIncrement": "buildNumber"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://178.105.36.248:8080",
-        "EXPO_PUBLIC_ENV": "qa"
+        "EXPO_PUBLIC_API_URL": "https://medq-be-qa.up.railway.app",
+        "EXPO_PUBLIC_ENV": "qa",
+        "EXPO_PUBLIC_STORAGE_PUBLIC_URL": "https://pub-3c7beaf4b934497e84e54682370a24bf.r2.dev",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1069164250595-vhjj6j2r3jmane3e1p7e7e8cs53pmuon.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1069164250595-2jgevbp6u7og24urqgu2et5dhtpegdcg.apps.googleusercontent.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.medreachplus.com",
-        "EXPO_PUBLIC_ENV": "production"
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1069164250595-vhjj6j2r3jmane3e1p7e7e8cs53pmuon.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1069164250595-2jgevbp6u7og24urqgu2et5dhtpegdcg.apps.googleusercontent.com"
       }
     }
   },

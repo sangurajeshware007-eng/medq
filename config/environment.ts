@@ -53,7 +53,7 @@ const configs: Record<Environment, EnvironmentConfig> = {
   },
   qa: {
     env: 'qa',
-    apiUrl: 'https://qa-api.medreachplus.com',
+    apiUrl: 'https://medq-be-qa.up.railway.app',
     enableDebug: true,
     enableApiLogging: true,
     requestTimeoutMs: 15_000,
