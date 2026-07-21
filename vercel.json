@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build:web",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/doctor/:id/reviews", "destination": "/doctor/[id]/reviews.html" },
+    { "source": "/doctor/:id", "destination": "/doctor/[id].html" },
+    { "source": "/hospital/:id", "destination": "/hospital/[id].html" },
+    { "source": "/booking/reschedule/:id", "destination": "/booking/reschedule/[id].html" },
+    { "source": "/booking/view/:id", "destination": "/booking/view/[id].html" },
+    { "source": "/booking/:id", "destination": "/booking/[id].html" },
+    { "source": "/token/:id", "destination": "/token/[id].html" }
+  ],
+  "headers": [
+    {
+      "source": "/_expo/static/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}

@@ -33,6 +33,35 @@ npm start                 # starts Metro bundler
 | `npm run ios` | Start Metro + auto-open iOS simulator |
 | `npm run ios:build` | Full native rebuild (`expo run:ios`) — slow |
 | `npm run android` | Start Metro + auto-open Android emulator |
+| `npm run web` | Start Metro + open the app in a browser |
+| `npm run build:web` | Static web export to `dist/` (what Vercel runs) |
+
+## Web (same codebase)
+
+The app also ships as a web app (react-native-web, `web.output: "static"`), deployed to
+Vercel — `vercel.json` holds the build command and the rewrites for dynamic routes
+(`/doctor/:id` → `doctor/[id].html` etc.).
+
+Platform-specific code uses `.web.tsx`/`.web.ts` file variants (Metro picks them
+automatically on web). **Gotcha:** route files under `app/` cannot be platform-split —
+Expo Router bundles every route file on every platform. Keep the route a thin re-export
+and split the underlying component in `components/` instead (see
+`app/onboarding/hospital/pick-location.tsx`).
+
+Current web forks: `utils/storage.web.ts` (localStorage instead of MMKV),
+`services/googleAuthService.web.tsx` (Google Identity Services),
+`utils/geocode.web.ts` (Nominatim — expo-location geocoding is native-only),
+`components/onboarding/HospitalPickLocationScreen.web.tsx` (Google Maps JS instead of
+react-native-maps, with a manual-coordinates fallback when no maps key is set).
+
+Web-specific environment variables (set in the Vercel project settings):
+
+| Variable | Purpose |
+|---|---|
+| `EXPO_PUBLIC_ENV` | `qa` or `production` |
+| `EXPO_PUBLIC_API_URL` | Backend base URL (optional — overrides the env default) |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | OAuth web client — also add the Vercel domain to its *Authorized JavaScript origins* |
+| `EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY` | Maps JS API key, HTTP-referrer-restricted (the `app.json` key is Android-only) |
 
 ## About the Xcode Warnings
 

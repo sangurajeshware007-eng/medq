@@ -25,10 +25,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CategoryCard from '../../components/CategoryCard';
 import LocalizedName from '../../components/LocalizedName';
 import LogoHeader from '../../components/LogoHeader';
+import Seo from '../../components/web/Seo';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
 import { useLocation } from '../../context/LocationContext';
 import { useHospitals, useNearbyDoctors } from '../../hooks/useApiHooks';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useVoiceSearch } from '../../hooks/useVoiceSearch';
 import type { DoctorListItem } from '../../services/doctorService';
 import type { HospitalListItem } from '../../services/hospitalService';
@@ -66,6 +68,9 @@ export default function SearchScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const { selectedLocation } = useLocation();
+  // Result cards flow into 2 (md) / 3 (lg) columns on wide screens (web).
+  const { select } = useBreakpoint();
+  const resultColumns = select({ sm: 1, md: 2, lg: 3 });
 
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -188,6 +193,11 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <Seo
+        title="Search Doctors by Specialty, Disease, or Name"
+        description="Search doctors and hospitals by specialization, disease, or name — filter by fee, distance, and rating on MedQ+."
+        path="/search"
+      />
       <LogoHeader />
 
       {/* Header */}
@@ -349,18 +359,24 @@ export default function SearchScreen() {
                 {filteredHospitals.length} {t('found')}
               </Text>
             </View>
-            {filteredHospitals.map((hospital) => (
-              <HospitalCard
-                key={hospital.id}
-                hospital={hospital}
-                onPress={() =>
-                  router.push({
-                    pathname: '/hospital/[id]',
-                    params: { id: String(hospital.id) },
-                  })
-                }
-              />
-            ))}
+            <View style={resultColumns > 1 && styles.resultsGrid}>
+              {filteredHospitals.map((hospital) => (
+                <View
+                  key={hospital.id}
+                  style={resultColumns > 1 && { width: `${100 / resultColumns - 1.5}%` }}
+                >
+                  <HospitalCard
+                    hospital={hospital}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/hospital/[id]',
+                        params: { id: String(hospital.id) },
+                      })
+                    }
+                  />
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
@@ -406,27 +422,38 @@ export default function SearchScreen() {
               </View>
             )}
 
-            {filteredDoctors.length > 0
-              ? filteredDoctors.map((doctor) => (
-                  <DoctorCard
+            {filteredDoctors.length > 0 ? (
+              <View style={resultColumns > 1 && styles.resultsGrid}>
+                {filteredDoctors.map((doctor) => (
+                  <View
                     key={doctor.id}
-                    doctor={doctor}
-                    onPress={() =>
-                      router.push({ pathname: '/doctor/[id]', params: { id: String(doctor.id) } })
-                    }
-                  />
-                ))
-              : // Hide the "no doctors" message when we did surface matching
-                // hospitals — the section above already gives the user a result.
-                filteredHospitals.length === 0 && (
-                  <View style={styles.emptyState}>
-                    <Frown size={40} color={Colors.textLight} strokeWidth={1.5} />
-                    <Text style={styles.emptyTitle}>{t('noMatches')}</Text>
-                    <Text style={styles.emptyDesc}>
-                      {feePresetIdx !== 0 ? t('wideFeeHint') : t('spellingsOkHint')}
-                    </Text>
+                    style={resultColumns > 1 && { width: `${100 / resultColumns - 1.5}%` }}
+                  >
+                    <DoctorCard
+                      doctor={doctor}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/doctor/[id]',
+                          params: { id: String(doctor.id) },
+                        })
+                      }
+                    />
                   </View>
-                )}
+                ))}
+              </View>
+            ) : (
+              // Hide the "no doctors" message when we did surface matching
+              // hospitals — the section above already gives the user a result.
+              filteredHospitals.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Frown size={40} color={Colors.textLight} strokeWidth={1.5} />
+                  <Text style={styles.emptyTitle}>{t('noMatches')}</Text>
+                  <Text style={styles.emptyDesc}>
+                    {feePresetIdx !== 0 ? t('wideFeeHint') : t('spellingsOkHint')}
+                  </Text>
+                </View>
+              )
+            )}
           </View>
         )}
 
@@ -636,6 +663,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   resultCount: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+  // Wide screens (web): cards flow into 2–3 columns.
+  resultsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 12,
+    justifyContent: 'flex-start',
+  },
 
   activeSummary: { flexDirection: 'row', gap: 6, marginBottom: 12, flexWrap: 'wrap' },
   activePill: {

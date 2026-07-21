@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /booking
+Disallow: /booking/
+Disallow: /profile
+Disallow: /profile/
+Disallow: /onboarding/
+Disallow: /reception/
+Disallow: /staff/
+Disallow: /token/
+Disallow: /login
+Disallow: /otp
+Disallow: /register
+Disallow: /complete-profile
+Disallow: /location-picker
+
+Sitemap: /sitemap.xml

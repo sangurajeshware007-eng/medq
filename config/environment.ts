@@ -35,6 +35,10 @@ export interface EnvironmentConfig {
   googleWebClientId: string;
   /** Google OAuth iOS client ID — required by the iOS SDK when not using a Firebase plist */
   googleIosClientId: string;
+  /** Google Maps JS API key (HTTP-referrer-restricted) — web builds only */
+  googleMapsWebKey: string;
+  /** Public URL of the web app (e.g. https://medq.example.com) — canonical/OG tags */
+  webUrl: string;
   /** Whether the phone/OTP login UI is shown (hidden at launch; re-enabled when OTP goes live) */
   enableOtpLogin: boolean;
 }
@@ -49,6 +53,8 @@ const configs: Record<Environment, EnvironmentConfig> = {
     requestTimeoutMs: 15_000,
     googleWebClientId: '',
     googleIosClientId: '',
+    googleMapsWebKey: '',
+    webUrl: '',
     enableOtpLogin: false,
   },
   qa: {
@@ -59,6 +65,8 @@ const configs: Record<Environment, EnvironmentConfig> = {
     requestTimeoutMs: 15_000,
     googleWebClientId: '',
     googleIosClientId: '',
+    googleMapsWebKey: '',
+    webUrl: '',
     enableOtpLogin: false,
   },
   production: {
@@ -69,6 +77,8 @@ const configs: Record<Environment, EnvironmentConfig> = {
     requestTimeoutMs: 10_000,
     googleWebClientId: '',
     googleIosClientId: '',
+    googleMapsWebKey: '',
+    webUrl: '',
     enableOtpLogin: false,
   },
 };
@@ -104,6 +114,16 @@ function resolveConfig(): EnvironmentConfig {
   const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   if (googleIosClientId) {
     config.googleIosClientId = googleIosClientId;
+  }
+
+  const googleMapsWebKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY;
+  if (googleMapsWebKey) {
+    config.googleMapsWebKey = googleMapsWebKey;
+  }
+
+  const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
+  if (webUrl) {
+    config.webUrl = webUrl.replace(/\/$/, '');
   }
 
   config.enableOtpLogin = process.env.EXPO_PUBLIC_ENABLE_OTP_LOGIN === 'true';

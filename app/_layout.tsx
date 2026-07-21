@@ -13,15 +13,19 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AnimatedSplash from '../components/AnimatedSplash';
 import ErrorFallback from '../components/ErrorFallback';
+import WebShell from '../components/web/WebShell';
 import { Colors } from '../constants/Colors';
 import { AuthProvider } from '../context/AuthContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { LocationProvider } from '../context/LocationContext';
+// Side effect: makes Alert.alert work in browsers (no-op on native).
+import '../utils/webAlertPolyfill';
 
 // Hide the native splash as soon as the JS bundle is ready — our animated
 // splash overlay takes over for a seamless handoff. Swallow errors so dev
@@ -38,7 +42,9 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
-  const [splashDone, setSplashDone] = useState(false);
+  // The JS splash overlay only makes sense on native — on web it would
+  // delay first contentful paint for no benefit.
+  const [splashDone, setSplashDone] = useState(Platform.OS === 'web');
 
   // Multi-script fonts for English / Hindi / Kannada. Block render until
   // they're ready so the first paint never shows missing-glyph boxes.
@@ -56,58 +62,60 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <LanguageProvider>
-              <LocationProvider>
-                <StatusBar style="dark" />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: Colors.background },
-                  }}
-                >
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="doctor/[id]"
-                    options={{ headerShown: false, presentation: 'card' }}
-                  />
-                  <Stack.Screen
-                    name="hospital/[id]"
-                    options={{ headerShown: false, presentation: 'card' }}
-                  />
-                  <Stack.Screen
-                    name="booking/[id]"
-                    options={{ headerShown: false, presentation: 'card' }}
-                  />
-                  <Stack.Screen
-                    name="token/[id]"
-                    options={{ headerShown: false, presentation: 'card' }}
-                  />
-                  <Stack.Screen
-                    name="nearme"
-                    options={{ headerShown: false, presentation: 'card' }}
-                  />
-                  <Stack.Screen
-                    name="location-picker"
-                    options={{ headerShown: false, presentation: 'modal' }}
-                  />
-                  <Stack.Screen
-                    name="onboarding"
-                    options={{ headerShown: false, presentation: 'card' }}
-                  />
-                  {/* reception/* and staff/* are auto-discovered by Expo Router from
+        <WebShell>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <LanguageProvider>
+                <LocationProvider>
+                  <StatusBar style="dark" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: Colors.background },
+                    }}
+                  >
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                    <Stack.Screen
+                      name="doctor/[id]"
+                      options={{ headerShown: false, presentation: 'card' }}
+                    />
+                    <Stack.Screen
+                      name="hospital/[id]"
+                      options={{ headerShown: false, presentation: 'card' }}
+                    />
+                    <Stack.Screen
+                      name="booking/[id]"
+                      options={{ headerShown: false, presentation: 'card' }}
+                    />
+                    <Stack.Screen
+                      name="token/[id]"
+                      options={{ headerShown: false, presentation: 'card' }}
+                    />
+                    <Stack.Screen
+                      name="nearme"
+                      options={{ headerShown: false, presentation: 'card' }}
+                    />
+                    <Stack.Screen
+                      name="location-picker"
+                      options={{ headerShown: false, presentation: 'modal' }}
+                    />
+                    <Stack.Screen
+                      name="onboarding"
+                      options={{ headerShown: false, presentation: 'card' }}
+                    />
+                    {/* reception/* and staff/* are auto-discovered by Expo Router from
                       app/reception/*.tsx and app/staff/*.tsx — explicit Stack.Screen
                       entries with name="reception" / "staff" caused the
                       "No route named …" warnings because there is no group layout
                       at those paths. Default Stack options apply automatically. */}
-                </Stack>
-                {!splashDone && <AnimatedSplash onDone={() => setSplashDone(true)} />}
-              </LocationProvider>
-            </LanguageProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+                  </Stack>
+                  {!splashDone && <AnimatedSplash onDone={() => setSplashDone(true)} />}
+                </LocationProvider>
+              </LanguageProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </WebShell>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

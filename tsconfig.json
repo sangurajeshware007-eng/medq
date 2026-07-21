@@ -47,9 +47,10 @@
     "moduleResolution": "bundler",
     "target": "esnext",
     "lib": [
-      "esnext"
+      "esnext",
+      "dom"
     ],
-    "types": ["jest"],
+    "types": ["jest", "google.accounts"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

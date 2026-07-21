@@ -12,6 +12,8 @@ npm run ios:build      # Full native rebuild (expo run:ios, ~2 min)
 npm run android        # Start Metro + open Android emulator
 npm run android:qa     # Start with QA environment
 npm run android:prod   # Start with production environment
+npm run web            # Start Metro + open in browser (react-native-web)
+npm run build:web      # Static web export to dist/ (Vercel build command)
 
 # Code quality
 npm run lint           # ESLint (strict, max-warnings: 0)
@@ -83,6 +85,19 @@ Service files (`services/`): `authService`, `doctorService`, `hospitalService`, 
 | Virtualized lists | Shopify FlashList |
 | Maps | React Native Maps |
 | Location | Expo Location |
+
+### Web Support
+
+The app ships to web from this same codebase (react-native-web, `web.output: "static"` in
+`app.json`, deployed to Vercel via `vercel.json`). Platform differences live in
+`.web.tsx`/`.web.ts` file variants: `utils/storage.web.ts`, `utils/geocode.web.ts`,
+`services/googleAuthService.web.tsx`, `components/onboarding/HospitalPickLocationScreen.web.tsx`.
+
+**Never platform-split a route file under `app/`** — Expo Router bundles every route file on
+every platform, so a native-only import in the base file breaks the web bundle even when a
+`.web.tsx` sibling exists. Keep routes as thin re-exports and split the component in
+`components/` instead. `npx expo export --platform web` is the compile gate that catches
+native-import leaks.
 
 ### Environment Configuration
 

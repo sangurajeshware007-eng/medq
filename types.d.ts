@@ -10,6 +10,7 @@ declare module 'expo-router' {
     back: () => void;
   };
   export const useLocalSearchParams: <T = Record<string, string>>() => T;
+  export const usePathname: () => string;
   export const Link: any;
   export const Redirect: any;
 }

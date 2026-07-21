@@ -24,9 +24,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import Seo from '../components/web/Seo';
 import { Colors } from '../constants/Colors';
 import { useLocation } from '../context/LocationContext';
 import { useNearbyHospitals } from '../hooks/useApiHooks';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 import type { HospitalListItem } from '../services/hospitalService';
 import { crossPlatformShadow } from '../utils/shadow';
 
@@ -154,6 +156,9 @@ function HospitalCard({ item, onPress }: { item: HospitalListItem; onPress: () =
 export default function HospitalsScreen() {
   const router = useRouter();
   const { selectedLocation, displayName } = useLocation();
+  // Cards flow into 2 (md) / 3 (lg) columns on wide screens (web).
+  const { select } = useBreakpoint();
+  const columns = select({ sm: 1, md: 2, lg: 3 });
   const { lat: latP, lng: lngP } = useLocalSearchParams<{ lat?: string; lng?: string }>();
 
   const effectiveLat = selectedLocation?.latitude ?? (latP ? parseFloat(latP) : 17.8674);
@@ -226,6 +231,11 @@ export default function HospitalsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Seo
+        title="Hospitals Near You"
+        description="Browse hospitals near you with departments, doctors, and directions — book appointments on MedQ+."
+        path="/hospitals"
+      />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -404,17 +414,23 @@ export default function HospitalsScreen() {
         </View>
       ) : (
         <FlatList
+          // numColumns can't change on the fly — remount when it does.
+          key={columns}
+          numColumns={columns}
+          columnWrapperStyle={columns > 1 ? { gap: 12 } : undefined}
           data={filtered}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <HospitalCard
-              item={item}
-              onPress={() =>
-                router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
-              }
-            />
+            <View style={columns > 1 ? { flex: 1 / columns } : undefined}>
+              <HospitalCard
+                item={item}
+                onPress={() =>
+                  router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
+                }
+              />
+            </View>
           )}
         />
       )}

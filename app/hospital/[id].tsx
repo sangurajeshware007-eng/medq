@@ -35,6 +35,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import LocalizedName from '../../components/LocalizedName';
+import Seo from '../../components/web/Seo';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
 import { useHospital } from '../../hooks/useApiHooks';
@@ -154,8 +155,31 @@ export default function HospitalDetailScreen() {
     Linking.openURL(safe).catch(() => {});
   };
 
+  const hospitalJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MedicalClinic',
+    name: hospital.name,
+    address: hospital.address || undefined,
+    ...(hospital.locationLat && hospital.locationLng
+      ? {
+          geo: {
+            '@type': 'GeoCoordinates',
+            latitude: hospital.locationLat,
+            longitude: hospital.locationLng,
+          },
+        }
+      : {}),
+    ...(specializations.length ? { medicalSpecialty: specializations } : {}),
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Seo
+        title={hospital.name}
+        description={`${hospital.name}${hospital.address ? `, ${hospital.address}` : ''} — departments, doctors, and appointment booking on MedQ+.`}
+        path={`/hospital/${id}`}
+        jsonLd={hospitalJsonLd}
+      />
       {/* Sticky header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBackBtn} onPress={() => router.back()}>
@@ -443,12 +467,9 @@ export default function HospitalDetailScreen() {
                     {typeof doctor.rating === 'number' && (
                       <Text style={styles.doctorRating}>★ {doctor.rating}</Text>
                     )}
-                    {typeof doctor.consultationFee === 'number' &&
-                      doctor.consultationFee > 0 && (
-                        <Text style={styles.doctorFee}>
-                          ₹{doctor.consultationFee} consultation
-                        </Text>
-                      )}
+                    {typeof doctor.consultationFee === 'number' && doctor.consultationFee > 0 && (
+                      <Text style={styles.doctorFee}>₹{doctor.consultationFee} consultation</Text>
+                    )}
                   </View>
                 </View>
                 <View style={styles.doctorAction}>

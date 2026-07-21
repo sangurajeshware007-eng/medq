@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import Seo from '../components/web/Seo';
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
 import { useLocation } from '../context/LocationContext';
@@ -232,6 +233,11 @@ export default function NearMeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Seo
+        title="Hospitals & Clinics Near Me"
+        description="Find hospitals and clinics near your location, filter by department and distance — MedQ+."
+        path="/nearme"
+      />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>

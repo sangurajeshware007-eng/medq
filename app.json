@@ -40,6 +40,8 @@
       "versionCode": 2
     },
     "web": {
+      "bundler": "metro",
+      "output": "static",
       "favicon": "./assets/logo/new/app-icon.png"
     },
     "plugins": [

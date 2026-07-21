@@ -30,18 +30,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// expo-location v19 exports reverseGeocodeAsync but type declarations may be incomplete
-const Location = ExpoLocation as typeof ExpoLocation & {
-  reverseGeocodeAsync: (location: { latitude: number; longitude: number }) => Promise<
-    Array<{
-      city?: string | null;
-      subregion?: string | null;
-      name?: string | null;
-      street?: string | null;
-      region?: string | null;
-    }>
-  >;
-};
 import AdminDashboard from '../../components/dashboard/AdminDashboard';
 import HospitalManagerDashboard from '../../components/dashboard/HospitalManagerDashboard';
 import QuickActions from '../../components/home/QuickActions';
@@ -50,15 +38,17 @@ import HospitalCard from '../../components/HospitalCard';
 import LanguageToggle from '../../components/LanguageToggle';
 import LogoHeader from '../../components/LogoHeader';
 import PremiumDoctorCard from '../../components/PremiumDoctorCard';
+import Seo from '../../components/web/Seo';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useLocation } from '../../context/LocationContext';
-import { crossPlatformShadow } from '../../utils/shadow';
 import { useNearbyHospitals, useNearbyDoctors, useNearbyCityImages } from '../../hooks/useApiHooks';
 import type { DoctorListItem } from '../../services/doctorService';
 import type { HospitalListItem } from '../../services/hospitalService';
 import { formatShortCredential } from '../../utils/doctorCredential';
+import { reverseGeocode } from '../../utils/geocode';
+import { crossPlatformShadow } from '../../utils/shadow';
 
 const RADIUS_KM = 50;
 
@@ -107,11 +97,10 @@ export default function HomeScreen() {
 
       // Reverse geocode to get city name
       try {
-        const geocodeResult = await Location.reverseGeocodeAsync({
+        const place = await reverseGeocode({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
         });
-        const place = geocodeResult?.[0];
         if (place) {
           setLocation({
             id: 'gps-detected',
@@ -257,6 +246,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <Seo
+        title="Book Doctor Appointments & Track Your Queue"
+        description="Find doctors and hospitals near you, book appointments, and track your live queue token — MedQ+."
+        path="/"
+      />
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}

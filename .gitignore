@@ -81,3 +81,6 @@ yarn-error.log
 
 # Expo / Metro
 .expo/
+
+# Web build output
+dist/
