@@ -1,0 +1,19 @@
+# Railway deployment for the MedQ+ WEB app (static Expo export served by `serve`).
+# The serve.json at the repo root supplies cleanUrls, the dynamic-route
+# rewrites (/doctor/:id → doctor/[id].html), and immutable asset caching —
+# the Railway equivalent of vercel.json.
+#
+# Required service variables (EXPO_PUBLIC_* are baked in at BUILD time —
+# redeploy after changing them):
+#   EXPO_PUBLIC_ENV, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+#   EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY, EXPO_PUBLIC_STORAGE_PUBLIC_URL,
+#   EXPO_PUBLIC_WEB_URL (set after the first deploy assigns a domain)
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build:web"
+
+[deploy]
+startCommand = "npx serve -l tcp://0.0.0.0:${PORT}"
+healthcheckPath = "/hospitals"
+restartPolicyType = "ON_FAILURE"

@@ -18,7 +18,18 @@ Project: the one that owns OAuth client `1069164250595-…` (existing sign-in cl
 - [ ] **Authorize web origin for sign-in**: *Credentials → OAuth 2.0 Client IDs → Web client (`1069164250595-vhjj…`)* → *Authorized JavaScript origins* → add the Vercel production URL (from step B). No redirect URIs needed (GIS button flow).
   - Note: no wildcards allowed here → Google sign-in won't work on preview deployments (expected).
 
-## B. Vercel (~10 min) — owner: Sangameshwar
+## B (option 1). Railway (~10 min) — owner: Sangameshwar
+
+Same platform as the QA backend. The repo is Railway-ready: `railway.toml` (build + start) and `serve.json` (rewrites, cleanUrls, asset caching) are committed.
+
+- [ ] railway.app → open the existing project (with `medq-be-qa`) → **+ New → GitHub Repo** → select **`medq`**.
+- [ ] Service → **Variables** → add (build-time — redeploy after changing):
+  `EXPO_PUBLIC_ENV=qa`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=1069164250595-vhjj6j2r3jmane3e1p7e7e8cs53pmuon.apps.googleusercontent.com`, `EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY=<from step A>`, `EXPO_PUBLIC_STORAGE_PUBLIC_URL=https://pub-3c7beaf4b934497e84e54682370a24bf.r2.dev`
+- [ ] **Settings → Networking → Generate Domain** → note the `*.up.railway.app` URL.
+- [ ] Add `EXPO_PUBLIC_WEB_URL=<that URL>` variable → **Redeploy**; add the URL to Google OAuth origins (step A) and the Maps key referrers (`https://*.up.railway.app/*`).
+- [ ] Trade-off vs Vercel: no CDN edge / per-PR previews; a small always-on service bills against Railway usage. Fine at current scale; revisit if traffic grows.
+
+## B (option 2). Vercel (~10 min) — owner: Sangameshwar
 
 - [ ] Log in at vercel.com with GitHub (`sangameshwarrr`) → **Add New → Project** → import **`medq`**.
 - [ ] Framework preset **Other** — `vercel.json` already defines build command, `dist/` output, and the dynamic-route rewrites.

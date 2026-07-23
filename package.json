@@ -2,6 +2,9 @@
   "name": "MedReachPlus",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "main": "expo-router/entry",
   "scripts": {
     "start": "cp .env.local .env 2>/dev/null; expo start",
@@ -67,6 +70,7 @@
     "react-native-svg": "^15.12.1",
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
+    "serve": "^14.2.6",
     "zod": "^3.24.3",
     "zustand": "^5.0.5"
   },
