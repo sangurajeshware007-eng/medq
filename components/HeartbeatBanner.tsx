@@ -1,33 +1,38 @@
 /**
  * HeartbeatBanner — the home page's living brand strip.
  *
- * A faint ECG baseline spans the row; a bright pulse travels it left → right
- * and, exactly when it reaches the end, the heart on the right performs the
- * cardiac "lub-dub" double beat with a soft glow — then the cycle repeats.
+ * A continuous heart-monitor feed: the ECG trace scrolls right-to-left
+ * forever (never pauses), with exactly PULSES_VISIBLE complexes on screen
+ * at any width. The strip advances one full complex per BEAT_MS, and the
+ * heart on the right performs its lub-dub on the same master timeline —
+ * one beat per passing pulse, always in sync.
  *
- * One master Animated.Value drives everything, so the pulse arrival and the
- * heartbeat can never drift out of sync. Core Animated + react-native-svg +
- * lucide — no new dependencies; identical on iOS, Android, and web.
+ * Core Animated + react-native-svg — no new dependencies; native-driver
+ * transforms only; identical on iOS, Android, and web.
  */
 import { Heart } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View, Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Colors } from '../constants/Colors';
 
-const CYCLE_MS = 2600;
-// Phase (0–1) at which the pulse reaches the heart and the lub-dub fires.
-const ARRIVAL = 0.72;
+/** One new pulse reaches the heart every beat. */
+// Animated.loop doesn't iterate with the native driver on react-native-web —
+// JS driver on web (loops fine there), native driver elsewhere.
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
-// ECG cycle in a 160×40 viewBox — same vocabulary as EcgLoader.
+const BEAT_MS = 1800;
+/** ECG complexes visible across the strip at any screen width. */
+const PULSES_VISIBLE = 5;
+
+// One ECG complex in a 160×40 viewBox: baseline → QRS spike → T-wave.
 const ECG_VIEW_W = 160;
 const ECG_VIEW_H = 40;
 const ECG_PATH = 'M0 20 H30 L38 20 L44 4 L52 36 L58 20 H86 Q92 12 98 20 H160';
 
-function EcgStrip({ color, width, height }: { color: string; width: number; height: number }) {
-  // preserveAspectRatio="none" stretches one cycle across the full strip —
-  // the baseline is decorative; the traveling highlight carries the motion.
+function EcgCycle({ color, width, height }: { color: string; width: number; height: number }) {
+  // preserveAspectRatio="none" lets one complex be exactly trackWidth/5 wide.
   return (
     <Svg
       width={width}
@@ -48,42 +53,36 @@ export default function HeartbeatBanner() {
     const loop = Animated.loop(
       Animated.timing(t, {
         toValue: 1,
-        duration: CYCLE_MS,
+        duration: BEAT_MS,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     );
     loop.start();
     return () => loop.stop();
   }, [t]);
 
-  const PULSE_W = 96;
-  const travel = Math.max(trackWidth - PULSE_W, 1);
+  const cycleWidth = trackWidth > 0 ? trackWidth / PULSES_VISIBLE : 0;
 
-  // Bright pulse: crosses the track during [0, ARRIVAL], then rests while
-  // the heart beats.
-  const pulseX = t.interpolate({
-    inputRange: [0, ARRIVAL, 1],
-    outputRange: [0, travel, travel],
-  });
-  const pulseOpacity = t.interpolate({
-    inputRange: [0, 0.05, ARRIVAL - 0.05, ARRIVAL, 1],
-    outputRange: [0, 1, 1, 0, 0],
+  // Seamless infinite scroll: shift left by exactly one complex per loop —
+  // frame N+1 of one cycle is identical to frame 0 of the next.
+  const translateX = t.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -cycleWidth],
   });
 
-  // Lub-dub: two quick contractions right after arrival — the first stronger
-  // (ventricular "lub"), the second lighter ("dub") — then rest.
+  // Lub-dub, one per passing pulse: strong first contraction, lighter second.
   const heartScale = t.interpolate({
-    inputRange: [0, ARRIVAL, ARRIVAL + 0.05, ARRIVAL + 0.1, ARRIVAL + 0.15, ARRIVAL + 0.2, 1],
-    outputRange: [1, 1, 1.32, 1.02, 1.22, 1, 1],
+    inputRange: [0, 0.08, 0.18, 0.28, 0.38, 1],
+    outputRange: [1, 1.3, 1.04, 1.2, 1, 1],
   });
   const glowOpacity = t.interpolate({
-    inputRange: [0, ARRIVAL, ARRIVAL + 0.06, ARRIVAL + 0.22, 1],
-    outputRange: [0, 0, 0.35, 0, 0],
+    inputRange: [0, 0.08, 0.38, 1],
+    outputRange: [0, 0.35, 0, 0],
   });
   const glowScale = t.interpolate({
-    inputRange: [0, ARRIVAL, ARRIVAL + 0.22, 1],
-    outputRange: [0.6, 0.6, 1.9, 1.9],
+    inputRange: [0, 0.38, 1],
+    outputRange: [0.6, 1.9, 1.9],
   });
 
   return (
@@ -92,30 +91,16 @@ export default function HeartbeatBanner() {
         style={styles.track}
         onLayout={(e) => setTrackWidth(Math.round(e.nativeEvent.layout.width))}
       >
-        {trackWidth > 0 && (
-          <>
-            {/* Faint baseline across the full width */}
-            <View style={StyleSheet.absoluteFill}>
-              <EcgStrip color={Colors.primaryLight} width={trackWidth} height={40} />
-            </View>
-            {/* Bright traveling pulse — a clipped window sliding over a vivid
-                copy that is counter-translated, so the highlight illuminates
-                the exact segment of the same waveform (a moving spotlight). */}
-            <Animated.View
-              style={[
-                styles.pulseWindow,
-                { width: PULSE_W, opacity: pulseOpacity, transform: [{ translateX: pulseX }] },
-              ]}
-            >
-              <Animated.View style={{ transform: [{ translateX: Animated.multiply(pulseX, -1) }] }}>
-                <EcgStrip color={Colors.primary} width={trackWidth} height={40} />
-              </Animated.View>
-            </Animated.View>
-          </>
+        {cycleWidth > 0 && (
+          <Animated.View style={[styles.strip, { transform: [{ translateX }] }]}>
+            {Array.from({ length: PULSES_VISIBLE + 2 }, (_, i) => (
+              <EcgCycle key={i} color={Colors.primary} width={cycleWidth} height={40} />
+            ))}
+          </Animated.View>
         )}
       </View>
 
-      {/* The heart — lub-dub on pulse arrival */}
+      {/* The heart — lub-dub for every pulse that reaches it */}
       <View style={styles.heartSlot}>
         <Animated.View
           style={[styles.glow, { opacity: glowOpacity, transform: [{ scale: glowScale }] }]}
@@ -147,12 +132,8 @@ const styles = StyleSheet.create({
     height: 40,
     overflow: 'hidden',
   },
-  pulseWindow: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    overflow: 'hidden',
+  strip: {
+    flexDirection: 'row',
   },
   heartSlot: {
     width: 40,

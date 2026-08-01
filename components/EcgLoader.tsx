@@ -9,10 +9,14 @@
  * iOS, Android, and web.
  */
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View, Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Colors } from '../constants/Colors';
+
+// Animated.loop doesn't iterate with the native driver on react-native-web —
+// JS driver on web (loops fine there), native driver elsewhere.
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 interface EcgLoaderProps {
   /** Visible window width. */
@@ -52,7 +56,7 @@ export default function EcgLoader({
         toValue: 1,
         duration: speed,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     );
     loop.start();

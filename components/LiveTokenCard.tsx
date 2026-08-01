@@ -1,12 +1,16 @@
 import { Radio, PartyPopper, Clock } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
 import { crossPlatformShadow } from '../utils/shadow';
 
 import LocalizedName from './LocalizedName';
+
+// Animated.loop doesn't iterate with the native driver on react-native-web —
+// JS driver on web (loops fine there), native driver elsewhere.
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 interface LiveTokenCardProps {
   currentToken: number;
@@ -22,11 +26,11 @@ export default function LiveTokenCard({ currentToken, yourToken, doctorName }: L
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     pulse.setValue(1.12);
-    Animated.spring(pulse, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+    Animated.spring(pulse, { toValue: 1, friction: 3, useNativeDriver: USE_NATIVE_DRIVER }).start();
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.04, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.04, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
     );
     loop.start();

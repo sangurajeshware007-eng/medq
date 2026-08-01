@@ -3,10 +3,14 @@
  * Perceived speed: a shaped skeleton reads ~2x faster than a spinner.
  */
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View, Platform } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import { Colors } from '../constants/Colors';
+
+// Animated.loop doesn't iterate with the native driver on react-native-web —
+// JS driver on web (loops fine there), native driver elsewhere.
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 interface SkeletonCardProps {
   /** Rough card shape: photo card (hospital) or row card (doctor list). */
@@ -20,8 +24,8 @@ export default function SkeletonCard({ variant = 'card', style }: SkeletonCardPr
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.5, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(opacity, { toValue: 0.5, duration: 700, useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
     );
     loop.start();

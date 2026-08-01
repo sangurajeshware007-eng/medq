@@ -10,9 +10,13 @@
  */
 import { Syringe, UserRound } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View, Platform } from 'react-native';
 
 import { Colors } from '../constants/Colors';
+
+// Animated.loop doesn't iterate with the native driver on react-native-web —
+// JS driver on web (loops fine there), native driver elsewhere.
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 interface InjectionLoaderProps {
   color?: string;
@@ -34,7 +38,7 @@ export default function InjectionLoader({
         toValue: 1,
         duration: CYCLE_MS,
         easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     );
     loop.start();
