@@ -9,7 +9,8 @@ import { useLocation } from '../context/LocationContext';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { crossPlatformShadow } from '../utils/shadow';
 
-import LanguageToggle from './LanguageToggle';
+// Phase 1: English only
+// import LanguageToggle from './LanguageToggle';
 
 // New brand wordmark — 524×183 PNG with "MedQ+" baked in on a teal gradient.
 const LOGO = require('../assets/logo/new/logo-icon.png');
@@ -55,7 +56,8 @@ export default function LogoHeader({ logoWidth = 105 }: LogoHeaderProps) {
           <Text style={styles.locationDropdown}>▼</Text>
         </TouchableOpacity>
 
-        <LanguageToggle />
+        {/* Phase 1: English only */}
+        {/* <LanguageToggle /> */}
       </View>
     </View>
   );

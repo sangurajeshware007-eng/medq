@@ -21,7 +21,8 @@ import { useLocation } from '../../context/LocationContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useAuthStore } from '../../store/authStore';
 import { crossPlatformShadow } from '../../utils/shadow';
-import LanguageToggle from '../LanguageToggle';
+// Phase 1: English only
+// import LanguageToggle from '../LanguageToggle';
 
 const LOGO = require('../../assets/logo/new/logo-icon.png');
 // Brand size knob — source PNG is 671×253 (≈2.65:1); keep that ratio.
@@ -70,7 +71,8 @@ export default function TopNav() {
           <Text style={styles.locationCaret}>▼</Text>
         </TouchableOpacity>
 
-        <LanguageToggle />
+        {/* Phase 1: English only */}
+        {/* <LanguageToggle /> */}
 
         {/* Auth area — fixed width while auth restores to avoid a
             Sign-in → avatar flicker on reload for logged-in users. */}

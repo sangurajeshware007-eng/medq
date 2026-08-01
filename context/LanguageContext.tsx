@@ -1,4 +1,5 @@
-import * as Localization from 'expo-localization';
+// Phase 1: English only — restore with detectInitialLanguage.
+// import * as Localization from 'expo-localization';
 import type { ReactNode } from 'react';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Text, TextInput } from 'react-native';
@@ -25,15 +26,20 @@ const LanguageContext = createContext<LanguageContextType>({
 
 /** Detect first-launch default: stored choice → device locale → English. */
 function detectInitialLanguage(): LanguageCode {
-  const stored = storage.getSync(STORAGE_KEY);
-  if (stored === 'en' || stored === 'hi' || stored === 'kn') return stored;
-  try {
-    const code = Localization.getLocales()[0]?.languageCode;
-    if (code === 'hi' || code === 'kn') return code;
-  } catch {
-    // expo-localization unavailable (e.g. some test envs) — fall through to en.
-  }
+  // ── Phase 1: English only ────────────────────────────────────────────
+  // The language switcher is hidden until hi/kn translations are complete.
+  // To re-enable: restore the commented detection below, un-comment the
+  // <LanguageToggle /> usages, and restore the profile-preference effect.
   return 'en';
+  // const stored = storage.getSync(STORAGE_KEY);
+  // if (stored === 'en' || stored === 'hi' || stored === 'kn') return stored;
+  // try {
+  //   const code = Localization.getLocales()[0]?.languageCode;
+  //   if (code === 'hi' || code === 'kn') return code;
+  // } catch {
+  //   // expo-localization unavailable (e.g. some test envs) — fall through to en.
+  // }
+  // return 'en';
 }
 
 /** Per-language script font. `undefined` means "use system default". */
@@ -83,14 +89,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // First time we see a logged-in user with a server-stored preference and
   // no local override, adopt theirs. Local choice (anything in storage) always
   // wins — this only kicks in for a fresh install of an existing account.
-  useEffect(() => {
-    if (!user?.preferredLanguage) return;
-    if (storage.getSync(STORAGE_KEY)) return;
-    const code = user.preferredLanguage as LanguageCode;
-    if (code === 'en' || code === 'hi' || code === 'kn') {
-      setLanguage(code);
-    }
-  }, [user?.preferredLanguage, setLanguage]);
+  // ── Phase 1: English only — profile preference adoption disabled with the
+  // language switcher. Restore this effect together with detectInitialLanguage.
+  // useEffect(() => {
+  //   if (!user?.preferredLanguage) return;
+  //   if (storage.getSync(STORAGE_KEY)) return;
+  //   const code = user.preferredLanguage as LanguageCode;
+  //   if (code === 'en' || code === 'hi' || code === 'kn') {
+  //     setLanguage(code);
+  //   }
+  // }, [user?.preferredLanguage, setLanguage]);
+  void user;
 
   const t = useCallback(
     (key: string): string => translations[language]?.[key] || translations.en?.[key] || key,

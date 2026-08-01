@@ -40,7 +40,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
-import LanguageToggle from '../../components/LanguageToggle';
+// Phase 1: English only
+// import LanguageToggle from '../../components/LanguageToggle';
 import LogoHeader from '../../components/LogoHeader';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
@@ -523,7 +524,8 @@ export default function ProfileScreen() {
             <Globe size={16} color={Colors.text} strokeWidth={2} />
             <Text style={styles.settingTitle}>{t('language')}</Text>
           </View>
-          <LanguageToggle />
+          {/* Phase 1: English only */}
+          {/* <LanguageToggle /> */}
         </Card>
 
         {/* My Bookings shortcut */}

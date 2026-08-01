@@ -26,7 +26,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import LanguageToggle from '../../components/LanguageToggle';
+// Phase 1: English only
+// import LanguageToggle from '../../components/LanguageToggle';
 import { getGoogleSigninButton } from '../../services/googleAuthService';
 import { phoneSchema, type PhoneFormValues } from '../../utils/authSchemas';
 
@@ -98,7 +99,8 @@ export default function PhoneEntryScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.langRow}>
-            <LanguageToggle />
+            {/* Phase 1: English only */}
+            {/* <LanguageToggle /> */}
           </View>
 
           {/* Logo */}

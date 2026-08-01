@@ -1,4 +1,7 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import {
   View,
   Text,
@@ -8,22 +11,20 @@ import {
   ScrollView,
   Modal,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 
-import { Colors } from '../../constants/Colors';
-import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
-import { Image } from 'react-native';
+import Button from '../../components/Button';
 import Input from '../../components/Input';
+import { Colors } from '../../constants/Colors';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { registerSchema, type RegisterFormValues } from '../../utils/authSchemas';
 
 const BRAND_LOGO = require('../../assets/logo/new/logo-icon.png');
-import Button from '../../components/Button';
-import LanguageToggle from '../../components/LanguageToggle';
-import { registerSchema, type RegisterFormValues } from '../../utils/authSchemas';
+// Phase 1: English only
+// import LanguageToggle from '../../components/LanguageToggle';
 
 const TERMS_AND_CONDITIONS = `TERMS AND CONDITIONS OF USE
 MedQ+ Healthcare Platform
@@ -80,7 +81,12 @@ Email: support@medqplus.in`;
 
 function TermsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
       <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Terms & Conditions</Text>
@@ -137,7 +143,8 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.langRow}>
-            <LanguageToggle />
+            {/* Phase 1: English only */}
+            {/* <LanguageToggle /> */}
           </View>
 
           {/* Logo */}
@@ -250,14 +257,18 @@ export default function RegisterScreen() {
                 {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
               </View>
               <Text style={styles.termsText2}>
-                I hereby declare that the information furnished by me is correct. I have read and agree to the{' '}
+                I hereby declare that the information furnished by me is correct. I have read and
+                agree to the{' '}
                 <Text
                   style={styles.termsLink}
-                  onPress={(e) => { e.stopPropagation(); setTermsVisible(true); }}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setTermsVisible(true);
+                  }}
                 >
                   Terms & Conditions
-                </Text>
-                {' '}including the mediator disclaimer.
+                </Text>{' '}
+                including the mediator disclaimer.
               </Text>
             </TouchableOpacity>
 
@@ -271,10 +282,7 @@ export default function RegisterScreen() {
             />
 
             {/* Switch to Login */}
-            <Text
-              style={styles.switchLink}
-              onPress={() => router.push('/(auth)/login')}
-            >
+            <Text style={styles.switchLink} onPress={() => router.push('/(auth)/login')}>
               {t('alreadyHaveAccount') || 'Already have an account? Login'}
             </Text>
           </View>
