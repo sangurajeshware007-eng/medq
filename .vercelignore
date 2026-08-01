@@ -1,4 +1,7 @@
 # Vercel builds only the web export — exclude what it doesn't need.
+# IMPORTANT: .env files must never upload — Vercel project env vars are the
+# single source of truth (an uploaded .env.production once overrode the API URL).
+.env*
 ios/
 android/
 docs/

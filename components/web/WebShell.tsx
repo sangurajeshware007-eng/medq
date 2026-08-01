@@ -1,46 +1,35 @@
 /**
- * WebShell — desktop framing for the phone-designed app (web only)
+ * WebShell — desktop framing for the app (web only)
  *
- * On web, centers the app in a column so every screen looks intentional on
- * desktop without per-screen work ("mobile-web-first"). Screens that have a
- * real responsive layout opt into a wider column via WIDE_ROUTES.
+ * Browsing surfaces are fluid: they fill the browser window up to a cap for
+ * very large monitors, and adapt at every width via useBreakpoint in the
+ * screens themselves. Form-centric flows (auth, onboarding) keep a narrow
+ * centered column — stretched single-column forms are worse UX than a
+ * readable one.
  *
  * On native it renders children untouched.
  */
-import { usePathname } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { Colors } from '../../constants/Colors';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { shadows } from '../../theme/shadows';
 
-const PHONE_MAX_WIDTH = 480;
-const WIDE_MAX_WIDTH = 1080;
-
-/**
- * Route prefixes that get the wide column. Only list screens whose layout
- * actually adapts (via useBreakpoint) — a phone layout stretched to 1080px
- * looks worse than a centered 480px column.
- */
-const WIDE_ROUTES = ['/search', '/hospitals'];
-
-function isWideRoute(pathname: string): boolean {
-  return WIDE_ROUTES.some((prefix) => pathname.startsWith(prefix));
-}
+/** Very large monitors get a centered column instead of a 2560px stretch. */
+const FLUID_MAX_WIDTH = 1440;
 
 export default function WebShell({ children }: { children: React.ReactNode }) {
-  // Hooks must run unconditionally; the pathname is only used on web.
-  const pathname = usePathname();
+  // Hook must run unconditionally; the value is only used on web.
+  const { width } = useBreakpoint();
 
   if (Platform.OS !== 'web') {
     return <>{children}</>;
   }
 
-  const maxWidth = isWideRoute(pathname) ? WIDE_MAX_WIDTH : PHONE_MAX_WIDTH;
-
   return (
     <View style={styles.page}>
-      <View style={[styles.column, { maxWidth }]}>{children}</View>
+      <View style={[styles.column, width > FLUID_MAX_WIDTH && styles.framed]}>{children}</View>
     </View>
   );
 }
@@ -49,13 +38,17 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     alignItems: 'center',
-    // Slightly darker than the app background so the column edge reads.
+    // Slightly darker than the app background so the column edge reads
+    // when the window is wider than the content cap.
     backgroundColor: '#E6EEF4',
   },
   column: {
     flex: 1,
     width: '100%',
+    maxWidth: FLUID_MAX_WIDTH,
     backgroundColor: Colors.background,
+  },
+  framed: {
     ...shadows.lg,
   },
 });

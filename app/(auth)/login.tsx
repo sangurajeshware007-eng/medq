@@ -196,7 +196,15 @@ export default function PhoneEntryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   keyboardView: { flex: 1 },
-  scrollContent: { flexGrow: 1, padding: 24, justifyContent: 'center' },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 24,
+    justifyContent: 'center',
+    // Readable form column on wide screens (web) — no effect on phones.
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+  },
   langRow: { position: 'absolute', top: 16, right: 0 },
   logoSection: { alignItems: 'center', marginBottom: 48 },
   brandLogo: { width: 240, height: 91, marginBottom: 12 },
