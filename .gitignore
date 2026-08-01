@@ -84,3 +84,4 @@ yarn-error.log
 
 # Web build output
 dist/
+.vercel
