@@ -25,7 +25,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CategoryCard from '../../components/CategoryCard';
 import LocalizedName from '../../components/LocalizedName';
 import LogoHeader from '../../components/LogoHeader';
+import HoverLift from '../../components/web/HoverLift';
 import Seo from '../../components/web/Seo';
+import WebFooter from '../../components/web/WebFooter';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
 import { useLocation } from '../../context/LocationContext';
@@ -365,15 +367,17 @@ export default function SearchScreen() {
                   key={hospital.id}
                   style={resultColumns > 1 && { width: `${100 / resultColumns - 1.5}%` }}
                 >
-                  <HospitalCard
-                    hospital={hospital}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/hospital/[id]',
-                        params: { id: String(hospital.id) },
-                      })
-                    }
-                  />
+                  <HoverLift>
+                    <HospitalCard
+                      hospital={hospital}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/hospital/[id]',
+                          params: { id: String(hospital.id) },
+                        })
+                      }
+                    />
+                  </HoverLift>
                 </View>
               ))}
             </View>
@@ -429,15 +433,17 @@ export default function SearchScreen() {
                     key={doctor.id}
                     style={resultColumns > 1 && { width: `${100 / resultColumns - 1.5}%` }}
                   >
-                    <DoctorCard
-                      doctor={doctor}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/doctor/[id]',
-                          params: { id: String(doctor.id) },
-                        })
-                      }
-                    />
+                    <HoverLift>
+                      <DoctorCard
+                        doctor={doctor}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/doctor/[id]',
+                            params: { id: String(doctor.id) },
+                          })
+                        }
+                      />
+                    </HoverLift>
                   </View>
                 ))}
               </View>
@@ -458,6 +464,7 @@ export default function SearchScreen() {
         )}
 
         <View style={{ height: 24 }} />
+        <WebFooter style={styles.footerBleed} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -669,6 +676,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     columnGap: 12,
     justifyContent: 'flex-start',
+  },
+  // Footer runs full-bleed past scrollContent's horizontal padding.
+  footerBleed: {
+    marginHorizontal: -16,
   },
 
   activeSummary: { flexDirection: 'row', gap: 6, marginBottom: 12, flexWrap: 'wrap' },

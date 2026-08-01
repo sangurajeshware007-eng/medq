@@ -33,6 +33,7 @@ import HeroSection from '../../components/DoctorProfile/HeroSection';
 import DoctorProfileStrength from '../../components/DoctorProfileStrength';
 import LocalizedName from '../../components/LocalizedName';
 import Seo from '../../components/web/Seo';
+import WebFooter from '../../components/web/WebFooter';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -431,6 +432,7 @@ export default function DoctorProfileScreen() {
         </View>
 
         <View style={styles.bottomSpacer} />
+        <WebFooter />
       </ScrollView>
 
       {/* STICKY BOTTOM BOOK BUTTON */}

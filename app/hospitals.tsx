@@ -24,7 +24,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import HoverLift from '../components/web/HoverLift';
 import Seo from '../components/web/Seo';
+import WebFooter from '../components/web/WebFooter';
 import { Colors } from '../constants/Colors';
 import { useLocation } from '../context/LocationContext';
 import { useNearbyHospitals } from '../hooks/useApiHooks';
@@ -422,14 +424,17 @@ export default function HospitalsScreen() {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={<WebFooter />}
           renderItem={({ item }) => (
             <View style={columns > 1 ? { flex: 1 / columns } : undefined}>
-              <HospitalCard
-                item={item}
-                onPress={() =>
-                  router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
-                }
-              />
+              <HoverLift>
+                <HospitalCard
+                  item={item}
+                  onPress={() =>
+                    router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
+                  }
+                />
+              </HoverLift>
             </View>
           )}
         />

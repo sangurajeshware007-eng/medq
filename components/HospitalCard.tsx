@@ -1,10 +1,13 @@
-import React from 'react';
-import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { MapPin } from 'lucide-react-native';
+import React from 'react';
+import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
 import { crossPlatformShadow } from '../utils/shadow';
+
 import LocalizedName from './LocalizedName';
 
 interface HospitalCardProps {
@@ -14,6 +17,8 @@ interface HospitalCardProps {
   rating: number;
   doctorsCount: number;
   onPress: () => void;
+  /** Optional container override — used by the web grid layout (width 100%). */
+  style?: StyleProp<ViewStyle>;
 }
 
 export default function HospitalCard({
@@ -23,11 +28,12 @@ export default function HospitalCard({
   rating,
   doctorsCount,
   onPress,
+  style,
 }: HospitalCardProps) {
   const { t } = useLanguage();
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.8}>
       <Image source={image} style={styles.image} contentFit="cover" transition={300} />
       <View style={styles.overlay} />
       <View style={styles.content}>
@@ -41,7 +47,9 @@ export default function HospitalCard({
             <Text style={styles.ratingText}>{rating}</Text>
           </View> */}
         </View>
-        <Text style={styles.doctors}>{doctorsCount} {t('topDoctors').toLowerCase()}</Text>
+        <Text style={styles.doctors}>
+          {doctorsCount} {t('topDoctors').toLowerCase()}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -54,7 +62,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginRight: 14,
     overflow: 'hidden',
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 6, opacity: 0.15, radius: 16, elevation: 6 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 6,
+      opacity: 0.15,
+      radius: 16,
+      elevation: 6,
+    }),
   },
   image: {
     width: '100%',

@@ -19,6 +19,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AnimatedSplash from '../components/AnimatedSplash';
 import ErrorFallback from '../components/ErrorFallback';
+import TopNav from '../components/web/TopNav';
 import WebShell from '../components/web/WebShell';
 import { Colors } from '../constants/Colors';
 import { AuthProvider } from '../context/AuthContext';
@@ -68,6 +69,8 @@ export default function RootLayout() {
               <LanguageProvider>
                 <LocationProvider>
                   <StatusBar style="dark" />
+                  {/* Desktop-web navbar — renders null on native/phone widths */}
+                  <TopNav />
                   <Stack
                     screenOptions={{
                       headerShown: false,

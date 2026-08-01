@@ -7,7 +7,8 @@
  *
  * Works on native too (tablets get md), but its main consumer is web.
  */
-import { useWindowDimensions } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, useWindowDimensions } from 'react-native';
 
 export type Breakpoint = 'sm' | 'md' | 'lg';
 
@@ -24,7 +25,15 @@ export interface BreakpointInfo {
 }
 
 export function useBreakpoint(): BreakpointInfo {
-  const { width } = useWindowDimensions();
+  const { width: liveWidth } = useWindowDimensions();
+  // Hydration safety (web): the static export is prerendered at width 0
+  // (phone layout). React requires the FIRST client render to match that
+  // HTML — reporting the real width immediately throws hydration error
+  // #418 wherever a wider layout adds/removes elements. So report `sm`
+  // until after mount, then switch to the live width. No-op on native.
+  const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
+  useEffect(() => setHydrated(true), []);
+  const width = hydrated ? liveWidth : 0;
   const breakpoint: Breakpoint =
     width >= BREAKPOINTS.lg ? 'lg' : width >= BREAKPOINTS.md ? 'md' : 'sm';
 

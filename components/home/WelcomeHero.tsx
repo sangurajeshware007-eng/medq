@@ -12,11 +12,20 @@
  * Bottom corners are heavily rounded so the hero "spills" into the white content
  * canvas below, echoing the rounded brand glyph.
  */
+import {
+  Search,
+  Sun,
+  Sunrise,
+  Moon,
+  Hospital,
+  Stethoscope,
+  ChevronRight,
+} from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
-import { Search, Sun, Sunrise, Moon, Hospital, Stethoscope, ChevronRight } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, Platform } from 'react-native';
 
 import { Colors } from '../../constants/Colors';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { crossPlatformShadow } from '../../utils/shadow';
 
 const GLYPH = require('../../assets/logo/new/app-icon.png');
@@ -64,6 +73,9 @@ export default function WelcomeHero({
   backgroundImages,
 }: WelcomeHeroProps) {
   const { text: greeting, Icon: GreetingIcon } = getGreeting();
+  // Desktop web: taller hero, larger type, constrained search width.
+  const { isMd, isLg } = useBreakpoint();
+  const wide = Platform.OS === 'web' && isMd;
 
   const images = backgroundImages ?? [];
   const hasImages = images.length > 0;
@@ -114,18 +126,26 @@ export default function WelcomeHero({
           <GreetingIcon size={16} color="rgba(255,255,255,0.85)" strokeWidth={2.5} />
           <Text style={styles.greetingText}>{greeting}</Text>
         </View>
-        <Text style={styles.title}>
+        <Text style={[styles.title, wide && styles.titleWide]}>
           {isLoggedIn ? `${userName}!` : 'Welcome to MedQ+'}
         </Text>
-        <Text style={styles.subtitle} numberOfLines={2}>{tagline}</Text>
+        <Text style={[styles.subtitle, wide && styles.subtitleWide]} numberOfLines={2}>
+          {tagline}
+        </Text>
       </View>
 
       {/* Layer 5: glass search bar */}
-      <TouchableOpacity style={styles.searchBar} onPress={onSearchPress} activeOpacity={0.85}>
+      <TouchableOpacity
+        style={[styles.searchBar, wide && styles.searchBarWide]}
+        onPress={onSearchPress}
+        activeOpacity={0.85}
+      >
         <View style={styles.searchIcon}>
           <Search size={16} color={Colors.primary} strokeWidth={2.5} />
         </View>
-        <Text style={styles.searchPlaceholder} numberOfLines={1}>{searchPlaceholder}</Text>
+        <Text style={styles.searchPlaceholder} numberOfLines={1}>
+          {searchPlaceholder}
+        </Text>
         <ChevronRight size={16} color="rgba(255,255,255,0.7)" strokeWidth={2.5} />
       </TouchableOpacity>
 
@@ -154,9 +174,13 @@ export default function WelcomeHero({
       {/* Caption row — landmark name + photo count when multiple */}
       {currentImage && currentImage.caption && (
         <View style={styles.captionRow}>
-          <Text style={styles.caption} numberOfLines={1}>📍 {currentImage.caption}</Text>
+          <Text style={styles.caption} numberOfLines={1}>
+            📍 {currentImage.caption}
+          </Text>
           {images.length > 1 && (
-            <Text style={styles.captionCount}>{currentIdx + 1}/{images.length}</Text>
+            <Text style={styles.captionCount}>
+              {currentIdx + 1}/{images.length}
+            </Text>
           )}
         </View>
       )}
@@ -168,12 +192,9 @@ export default function WelcomeHero({
   if (currentImage) {
     return (
       <View style={styles.wrap}>
-        <View style={styles.canvas}>
+        <View style={[styles.canvas, wide && (isLg ? styles.canvasLg : styles.canvasWide)]}>
           {/* Animated image layer — fades independently of overlay/content. */}
-          <Animated.View
-            style={[styles.imageLayer, { opacity: fadeOpacity }]}
-            pointerEvents="none"
-          >
+          <Animated.View style={[styles.imageLayer, { opacity: fadeOpacity }]} pointerEvents="none">
             <Image
               source={{ uri: currentImage.imageUrl }}
               style={StyleSheet.absoluteFillObject}
@@ -191,17 +212,13 @@ export default function WelcomeHero({
   // Default canvas: solid teal + organic decorative blobs.
   return (
     <View style={styles.wrap}>
-      <View style={styles.canvas}>
+      <View style={[styles.canvas, wide && (isLg ? styles.canvasLg : styles.canvasWide)]}>
         <View style={[styles.blob, styles.blobOne]} />
         <View style={[styles.blob, styles.blobTwo]} />
         <View style={[styles.blob, styles.blobThree]} />
 
         {/* Brand glyph watermark — anchored bottom-right, very faded */}
-        <Image
-          source={GLYPH}
-          style={styles.watermark}
-          resizeMode="contain"
-        />
+        <Image source={GLYPH} style={styles.watermark} resizeMode="contain" />
         {innerContent}
       </View>
     </View>
@@ -214,7 +231,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 28,
     overflow: 'hidden',
-    ...crossPlatformShadow({ color: Colors.primaryDark, offsetY: 10, opacity: 0.22, radius: 22, elevation: 12 }),
+    ...crossPlatformShadow({
+      color: Colors.primaryDark,
+      offsetY: 10,
+      opacity: 0.22,
+      radius: 22,
+      elevation: 12,
+    }),
   },
   canvas: {
     backgroundColor: Colors.primary,
@@ -223,6 +246,24 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     overflow: 'hidden',
   },
+  // Desktop-web variants — taller, roomier hero band.
+  canvasWide: {
+    paddingHorizontal: 40,
+    paddingTop: 40,
+    paddingBottom: 32,
+    minHeight: 240,
+    justifyContent: 'center',
+  },
+  canvasLg: {
+    paddingHorizontal: 48,
+    paddingTop: 48,
+    paddingBottom: 40,
+    minHeight: 280,
+    justifyContent: 'center',
+  },
+  titleWide: { fontSize: 34 },
+  subtitleWide: { fontSize: 15, maxWidth: 560 },
+  searchBarWide: { maxWidth: 560, paddingVertical: 13 },
   imageLayer: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
@@ -260,20 +301,26 @@ const styles = StyleSheet.create({
   // Decorative blobs — soft tinted circles add organic depth without a gradient lib
   blob: { position: 'absolute', borderRadius: 999 },
   blobOne: {
-    width: 220, height: 220,
-    top: -90, right: -80,
+    width: 220,
+    height: 220,
+    top: -90,
+    right: -80,
     backgroundColor: Colors.primaryDark,
     opacity: 0.28,
   },
   blobTwo: {
-    width: 160, height: 160,
-    bottom: -60, left: -40,
+    width: 160,
+    height: 160,
+    bottom: -60,
+    left: -40,
     backgroundColor: Colors.primaryLight,
-    opacity: 0.10,
+    opacity: 0.1,
   },
   blobThree: {
-    width: 90, height: 90,
-    top: 30, left: 60,
+    width: 90,
+    height: 90,
+    top: 30,
+    left: 60,
     backgroundColor: Colors.white,
     opacity: 0.06,
   },
@@ -318,9 +365,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.22)',
   },
   searchIcon: {
-    width: 30, height: 30, borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     backgroundColor: Colors.white,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchPlaceholder: {
     flex: 1,

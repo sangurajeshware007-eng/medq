@@ -1,18 +1,26 @@
-import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Search, Calendar, HeartPulse, User, LayoutDashboard } from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
-import { crossPlatformShadow } from '../../utils/shadow';
-import { useAuthStore } from '../../store/authStore';
+import React from 'react';
+import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import ErrorFallback from '../../components/ErrorFallback';
+import { Colors } from '../../constants/Colors';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useAuthStore } from '../../store/authStore';
+import { crossPlatformShadow } from '../../utils/shadow';
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return <ErrorFallback error={error} retry={retry} />;
 }
 
-function TabIcon({ IconComponent, focused }: { IconComponent: React.ElementType; focused: boolean }) {
+function TabIcon({
+  IconComponent,
+  focused,
+}: {
+  IconComponent: React.ElementType;
+  focused: boolean;
+}) {
   return (
     <View style={[styles.tabItem, focused && styles.tabItemActive]}>
       <IconComponent
@@ -49,12 +57,7 @@ function BookingTabIcon({ focused }: { focused: boolean }) {
 
       {/* Layer 2 — heart-pulse mini-badge in the bottom-right corner.
           White circle background so it reads cleanly against the calendar's grid lines. */}
-      <View
-        style={[
-          styles.bookingBadge,
-          focused && styles.bookingBadgeActive,
-        ]}
-      >
+      <View style={[styles.bookingBadge, focused && styles.bookingBadgeActive]}>
         <HeartPulse
           size={9}
           color={focused ? Colors.accent : Colors.textLight}
@@ -69,7 +72,11 @@ function BookingTabIcon({ focused }: { focused: boolean }) {
 export default function TabLayout() {
   const { isLoggedIn, initializing, user } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const { isMd } = useBreakpoint();
   const isDoctor = user?.role === 'DOCTOR';
+  // Desktop web navigates via TopNav (app/_layout.tsx) — hide the bottom bar
+  // there but keep every Tabs.Screen registered so its routes stay mounted.
+  const hideTabBar = Platform.OS === 'web' && isMd;
 
   // While auth state is being restored, show a loader instead of mounting <Tabs>.
   // Mounting Tabs and then switching to <Redirect> on the same render cycle leaves
@@ -91,13 +98,15 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            height: 64 + insets.bottom,
-            paddingBottom: 6 + insets.bottom,
-          },
-        ],
+        tabBarStyle: hideTabBar
+          ? { display: 'none' }
+          : [
+              styles.tabBar,
+              {
+                height: 64 + insets.bottom,
+                paddingBottom: 6 + insets.bottom,
+              },
+            ],
         tabBarShowLabel: false,
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textLight,
@@ -122,9 +131,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="booking"
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <BookingTabIcon focused={focused} />
-          ),
+          tabBarIcon: ({ focused }: { focused: boolean }) => <BookingTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -149,13 +156,24 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  splash: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
+  splash: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background,
+  },
   tabBar: {
     backgroundColor: Colors.white,
     borderTopWidth: 2,
     borderTopColor: Colors.primaryLight,
     paddingTop: 6,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: -6, opacity: 0.18, radius: 28, elevation: 18 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: -6,
+      opacity: 0.18,
+      radius: 28,
+      elevation: 18,
+    }),
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -186,7 +204,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
   },
   bookingBadgeActive: {
-    borderColor: Colors.accent,             // coral border on active — pairs with the
-    ...crossPlatformShadow({ color: Colors.accent, opacity: 0.35, offsetY: 2, radius: 4, elevation: 3 }),
+    borderColor: Colors.accent, // coral border on active — pairs with the
+    ...crossPlatformShadow({
+      color: Colors.accent,
+      opacity: 0.35,
+      offsetY: 2,
+      radius: 4,
+      elevation: 3,
+    }),
   },
 });

@@ -27,6 +27,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -38,12 +39,15 @@ import HospitalCard from '../../components/HospitalCard';
 import LanguageToggle from '../../components/LanguageToggle';
 import LogoHeader from '../../components/LogoHeader';
 import PremiumDoctorCard from '../../components/PremiumDoctorCard';
+import HoverLift from '../../components/web/HoverLift';
 import Seo from '../../components/web/Seo';
+import WebFooter from '../../components/web/WebFooter';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useLocation } from '../../context/LocationContext';
 import { useNearbyHospitals, useNearbyDoctors, useNearbyCityImages } from '../../hooks/useApiHooks';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import type { DoctorListItem } from '../../services/doctorService';
 import type { HospitalListItem } from '../../services/hospitalService';
 import { formatShortCredential } from '../../utils/doctorCredential';
@@ -57,6 +61,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const { selectedLocation, displayName, detecting, setLocation, setDetecting } = useLocation();
   const { user, isLoggedIn } = useAuth();
+  // Desktop web: horizontal carousels become responsive grids.
+  const { select: bpSelect, isMd } = useBreakpoint();
+  const isDesktopWeb = Platform.OS === 'web' && isMd;
+  const hospitalCols = bpSelect({ sm: 1, md: 2, lg: 3 });
+  const doctorCols = bpSelect({ sm: 1, md: 3, lg: 4 });
 
   // ── GPS location state ─────────────────────────────────────────────
   const [gpsCoords, setGpsCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -244,6 +253,55 @@ export default function HomeScreen() {
     );
   }
 
+  // Compact doctor card — shared by the phone carousel and the desktop-web grid.
+  const renderDoctorCard = (item: DoctorListItem) => (
+    <TouchableOpacity
+      style={[styles.compactDoctorCard, isDesktopWeb && styles.gridDoctorCard]}
+      onPress={() => router.push({ pathname: '/doctor/[id]', params: { id: String(item.id) } })}
+      activeOpacity={0.8}
+    >
+      <Image source={item.photo} style={styles.compactImage} contentFit="cover" transition={300} />
+      {item.verified && (
+        <View style={styles.compactVerifiedBadge}>
+          <Text style={styles.compactVerifiedIcon}>✓</Text>
+        </View>
+      )}
+      <Text style={styles.compactName} numberOfLines={1}>
+        {item.name}
+      </Text>
+      <Text style={styles.compactSpec} numberOfLines={1}>
+        {item.specialization}
+      </Text>
+      <View style={styles.compactRatingRow}>
+        {/* Phase 1: qualification instead of rating */}
+        {formatShortCredential(item.degree) !== '' ? (
+          <>
+            <Text style={styles.compactRating} numberOfLines={1}>
+              {formatShortCredential(item.degree)}
+            </Text>
+            <Text style={styles.compactExp}> · {item.experience}yr</Text>
+          </>
+        ) : (
+          <Text style={styles.compactExp}>{item.experience}yr exp</Text>
+        )}
+      </View>
+      {typeof item.distanceKm === 'number' && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
+          <MapPin size={10} color={Colors.textSecondary} strokeWidth={2.5} />
+          <Text style={styles.compactHospital} numberOfLines={1}>
+            {item.distanceKm.toFixed(1)} km
+          </Text>
+        </View>
+      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
+        <Hospital size={10} color={Colors.textSecondary} strokeWidth={2} />
+        <Text style={styles.compactHospital} numberOfLines={1}>
+          {item.hospitalName}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Seo
@@ -344,28 +402,52 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {hospitalsList.length > 0 && (
-            <FlashList
-              data={hospitalsList}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => String(item.id)}
-              estimatedItemSize={178}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => (
-                <HospitalCard
-                  name={item.name}
-                  image={item.image}
-                  distance={item.distance || ''}
-                  rating={item.rating}
-                  doctorsCount={item.doctorsCount}
-                  onPress={() =>
-                    router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
-                  }
-                />
-              )}
-            />
-          )}
+          {hospitalsList.length > 0 &&
+            (isDesktopWeb ? (
+              <View style={styles.webGrid}>
+                {hospitalsList.slice(0, hospitalCols * 2).map((item) => (
+                  <View key={item.id} style={{ width: `${100 / hospitalCols - 1.5}%` }}>
+                    <HoverLift>
+                      <HospitalCard
+                        name={item.name}
+                        image={item.image || ''}
+                        distance={item.distance || ''}
+                        rating={item.rating}
+                        doctorsCount={item.doctorsCount}
+                        style={styles.gridHospitalCard}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/hospital/[id]',
+                            params: { id: String(item.id) },
+                          })
+                        }
+                      />
+                    </HoverLift>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <FlashList
+                data={hospitalsList}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => String(item.id)}
+                estimatedItemSize={178}
+                contentContainerStyle={styles.horizontalList}
+                renderItem={({ item }) => (
+                  <HospitalCard
+                    name={item.name}
+                    image={item.image}
+                    distance={item.distance || ''}
+                    rating={item.rating}
+                    doctorsCount={item.doctorsCount}
+                    onPress={() =>
+                      router.push({ pathname: '/hospital/[id]', params: { id: String(item.id) } })
+                    }
+                  />
+                )}
+              />
+            ))}
         </View>
 
         {/* Top Doctors Near You (horizontal) */}
@@ -397,7 +479,17 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {shuffledDoctors.length > 0 && (
+          {shuffledDoctors.length > 0 && isDesktopWeb && (
+            <View style={styles.webGrid}>
+              {shuffledDoctors.slice(0, doctorCols * 2).map((item) => (
+                <View key={item.id} style={{ width: `${100 / doctorCols - 1.5}%` }}>
+                  <HoverLift>{renderDoctorCard(item)}</HoverLift>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {shuffledDoctors.length > 0 && !isDesktopWeb && (
             <FlashList
               data={shuffledDoctors.slice(0, 6)}
               horizontal
@@ -405,66 +497,7 @@ export default function HomeScreen() {
               keyExtractor={(item) => String(item.id)}
               estimatedItemSize={178}
               contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.compactDoctorCard}
-                  onPress={() =>
-                    router.push({ pathname: '/doctor/[id]', params: { id: String(item.id) } })
-                  }
-                  activeOpacity={0.8}
-                >
-                  <Image
-                    source={item.photo}
-                    style={styles.compactImage}
-                    contentFit="cover"
-                    transition={300}
-                  />
-                  {item.verified && (
-                    <View style={styles.compactVerifiedBadge}>
-                      <Text style={styles.compactVerifiedIcon}>✓</Text>
-                    </View>
-                  )}
-                  <Text style={styles.compactName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.compactSpec} numberOfLines={1}>
-                    {item.specialization}
-                  </Text>
-                  <View style={styles.compactRatingRow}>
-                    {/* Phase 1: qualification instead of rating */}
-                    {/* <Text style={styles.compactStar}>★</Text>
-                    <Text style={styles.compactRating}>{item.rating}</Text> */}
-                    {formatShortCredential(item.degree) !== '' ? (
-                      <>
-                        <Text style={styles.compactRating} numberOfLines={1}>
-                          {formatShortCredential(item.degree)}
-                        </Text>
-                        <Text style={styles.compactExp}> · {item.experience}yr</Text>
-                      </>
-                    ) : (
-                      <Text style={styles.compactExp}>{item.experience}yr exp</Text>
-                    )}
-                  </View>
-                  {item.distanceKm != null && (
-                    <View
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}
-                    >
-                      <MapPin size={10} color={Colors.textSecondary} strokeWidth={2.5} />
-                      <Text style={styles.compactHospital} numberOfLines={1}>
-                        {item.distanceKm.toFixed(1)} km
-                      </Text>
-                    </View>
-                  )}
-                  <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}
-                  >
-                    <Hospital size={10} color={Colors.textSecondary} strokeWidth={2} />
-                    <Text style={styles.compactHospital} numberOfLines={1}>
-                      {item.hospitalName}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => renderDoctorCard(item)}
             />
           )}
         </View>
@@ -493,6 +526,7 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.bottomSpacer} />
+        <WebFooter />
       </ScrollView>
     </SafeAreaView>
   );
@@ -743,6 +777,22 @@ const styles = StyleSheet.create({
   },
   horizontalList: {
     paddingRight: 16,
+  },
+  // Desktop web: carousels become wrap-grids (same idiom as search.tsx).
+  webGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 12,
+    rowGap: 12,
+  },
+  gridHospitalCard: {
+    width: '100%',
+    marginRight: 0,
+    height: 180,
+  },
+  gridDoctorCard: {
+    width: '100%',
+    marginRight: 0,
   },
   bottomSpacer: {
     height: 24,
