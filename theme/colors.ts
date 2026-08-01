@@ -26,6 +26,8 @@ export const status = {
   warning: '#F5A623',
   warningLight: '#FFF8E7',
   warningGlow: 'rgba(245, 166, 35, 0.15)',
+  /** Dark amber for text on warningLight surfaces (WCAG-safe). */
+  warningText: '#B45309',
 
   error: '#EF4444',
   errorLight: '#FEF2F2',
@@ -93,6 +95,7 @@ export const palette = {
   gold: feature.gold,
   goldLight: feature.goldLight,
   goldGlow: feature.goldGlow,
+  warningText: status.warningText,
   tokenPurple: feature.token,
   tokenPurpleLight: feature.tokenLight,
   tokenPurpleGlow: feature.tokenGlow,
@@ -108,4 +111,3 @@ export const palette = {
   cardBg: surface.card,
   background: surface.background,
 } as const;
-
