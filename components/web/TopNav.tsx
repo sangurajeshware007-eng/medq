@@ -25,9 +25,11 @@ import { crossPlatformShadow } from '../../utils/shadow';
 // import LanguageToggle from '../LanguageToggle';
 
 const LOGO = require('../../assets/logo/new/logo-icon.png');
-// Brand size knob — source PNG is 671×253 (≈2.65:1); keep that ratio.
-const LOGO_WIDTH = 132;
-const LOGO_HEIGHT = Math.round(LOGO_WIDTH / 2.65);
+// Brand size knobs per device class — source PNG is 671×253 (≈2.65:1);
+// height always follows the ratio so the mark never distorts.
+const LOGO_WIDTH_LG = 190; // laptop / desktop (≥1024)
+const LOGO_WIDTH_MD = 160; // tablet (768–1023)
+const logoDims = (width: number) => ({ width, height: Math.round(width / 2.65) });
 
 const CHROME_FREE_PREFIXES = ['/login', '/otp', '/register', '/complete-profile', '/onboarding'];
 
@@ -35,7 +37,7 @@ export default function TopNav() {
   // All hooks run unconditionally; gating happens below.
   const router = useRouter();
   const pathname = usePathname();
-  const { isMd } = useBreakpoint();
+  const { isMd, isLg } = useBreakpoint();
   const { t } = useLanguage();
   const { displayName, detecting } = useLocation();
   const { isLoggedIn, user, initializing } = useAuthStore();
@@ -51,7 +53,11 @@ export default function TopNav() {
         {/* Brand */}
         <Link href="/" asChild>
           <Pressable accessibilityRole="link">
-            <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+            <Image
+              source={LOGO}
+              style={logoDims(isLg ? LOGO_WIDTH_LG : LOGO_WIDTH_MD)}
+              resizeMode="contain"
+            />
           </Pressable>
         </Link>
 
@@ -121,13 +127,12 @@ const styles = StyleSheet.create({
   },
   inner: {
     width: '100%',
-    height: 64,
+    height: 76,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
     gap: 16,
   },
-  logo: { width: LOGO_WIDTH, height: LOGO_HEIGHT },
   spacer: { flex: 1 },
   locationPill: {
     flexDirection: 'row',

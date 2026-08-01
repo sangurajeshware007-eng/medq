@@ -24,7 +24,7 @@ interface LogoHeaderProps {
   logoWidth?: number;
 }
 
-export default function LogoHeader({ logoWidth = 105 }: LogoHeaderProps) {
+export default function LogoHeader({ logoWidth }: LogoHeaderProps) {
   const router = useRouter();
   const { displayName, detecting } = useLocation();
   const { t } = useLanguage();
@@ -33,13 +33,19 @@ export default function LogoHeader({ logoWidth = 105 }: LogoHeaderProps) {
   // Desktop web gets the TopNav bar instead (see components/web/TopNav.tsx).
   if (Platform.OS === 'web' && isMd) return null;
 
+  // Per-device default: phones 125, tablets 150 — explicit prop wins.
+  const effectiveLogoWidth = logoWidth ?? (isMd ? 150 : 125);
+
   return (
     <View style={styles.header}>
       <View style={styles.headerTop}>
         {/* Brand wordmark — assets/logo/new/logo-icon.png */}
         <Image
           source={LOGO}
-          style={[styles.logo, { width: logoWidth, height: Math.round(logoWidth / 2.65) }]}
+          style={[
+            styles.logo,
+            { width: effectiveLogoWidth, height: Math.round(effectiveLogoWidth / 2.65) },
+          ]}
           resizeMode="contain"
         />
 
