@@ -1,0 +1,7 @@
+# Vercel builds only the web export — exclude what it doesn't need.
+ios/
+android/
+docs/
+.expo/
+coverage/
+*.log

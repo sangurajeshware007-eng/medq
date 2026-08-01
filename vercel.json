@@ -5,13 +5,13 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/doctor/:id/reviews", "destination": "/doctor/[id]/reviews.html" },
-    { "source": "/doctor/:id", "destination": "/doctor/[id].html" },
-    { "source": "/hospital/:id", "destination": "/hospital/[id].html" },
-    { "source": "/booking/reschedule/:id", "destination": "/booking/reschedule/[id].html" },
-    { "source": "/booking/view/:id", "destination": "/booking/view/[id].html" },
-    { "source": "/booking/:id", "destination": "/booking/[id].html" },
-    { "source": "/token/:id", "destination": "/token/[id].html" }
+    { "source": "/doctor/:id/reviews", "destination": "/doctor/[id]/reviews" },
+    { "source": "/doctor/:id", "destination": "/doctor/[id]" },
+    { "source": "/hospital/:id", "destination": "/hospital/[id]" },
+    { "source": "/booking/reschedule/:id", "destination": "/booking/reschedule/[id]" },
+    { "source": "/booking/view/:id", "destination": "/booking/view/[id]" },
+    { "source": "/booking/:id", "destination": "/booking/[id]" },
+    { "source": "/token/:id", "destination": "/token/[id]" }
   ],
   "headers": [
     {
