@@ -71,7 +71,7 @@ function BookingTabIcon({ focused }: { focused: boolean }) {
 }
 
 export default function TabLayout() {
-  const { initializing, user } = useAuthStore();
+  const { initializing, user, isLoggedIn } = useAuthStore();
   const insets = useSafeAreaInsets();
   const { isMd } = useBreakpoint();
   const isDoctor = user?.role === 'DOCTOR';
@@ -133,6 +133,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="booking"
         options={{
+          // Hidden for anonymous users — bookings are personal.
+          href: isLoggedIn ? undefined : null,
           tabBarIcon: ({ focused }: { focused: boolean }) => <BookingTabIcon focused={focused} />,
         }}
       />
@@ -148,6 +150,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          // Hidden for anonymous users — sign in via a personal action instead.
+          href: isLoggedIn ? undefined : null,
           tabBarIcon: ({ focused }: { focused: boolean }) => (
             <TabIcon IconComponent={User} focused={focused} />
           ),

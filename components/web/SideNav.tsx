@@ -63,18 +63,20 @@ export default function SideNav() {
   // Hooks run unconditionally; gating below.
   const pathname = usePathname();
   const { isMd } = useBreakpoint();
-  const { user } = useAuthStore();
+  const { user, isLoggedIn } = useAuthStore();
 
   if (Platform.OS !== 'web' || !isMd) return null;
   if (CHROME_FREE_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
   const isDoctor = user?.role === 'DOCTOR';
+  // Personal destinations only appear once signed in — anonymous visitors
+  // see the browsing surfaces and the Sign-in button in the TopNav.
   const primary: Item[] = [
     { label: 'Home', href: '/', Icon: Home, exact: true },
     { label: 'Search', href: '/search', Icon: Search },
-    { label: 'Bookings', href: '/booking', Icon: Calendar },
+    ...(isLoggedIn ? [{ label: 'Bookings', href: '/booking', Icon: Calendar }] : []),
     ...(isDoctor ? [{ label: 'Dashboard', href: '/dashboard', Icon: LayoutDashboard }] : []),
-    { label: 'Profile', href: '/profile', Icon: User },
+    ...(isLoggedIn ? [{ label: 'Profile', href: '/profile', Icon: User }] : []),
   ];
   const discover: Item[] = [
     { label: 'Hospitals', href: '/hospitals', Icon: Hospital },

@@ -13,6 +13,7 @@ import { Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } fr
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import { Colors } from '../../constants/Colors';
+import { useAuthStore } from '../../store/authStore';
 
 const LOGO = require('../../assets/logo/new/logo-icon.png');
 
@@ -34,6 +35,7 @@ function FooterLink({ label, onPress }: { label: string; onPress: () => void }) 
 
 export default function WebFooter({ style }: WebFooterProps) {
   const router = useRouter();
+  const { isLoggedIn } = useAuthStore();
 
   if (Platform.OS !== 'web') return null;
 
@@ -55,7 +57,9 @@ export default function WebFooter({ style }: WebFooterProps) {
             <FooterLink label="Find Doctors" onPress={() => router.push('/(tabs)/search')} />
             <FooterLink label="Hospitals" onPress={() => router.push('/hospitals')} />
             <FooterLink label="Near Me" onPress={() => router.push('/nearme')} />
-            <FooterLink label="My Bookings" onPress={() => router.push('/(tabs)/booking')} />
+            {isLoggedIn && (
+              <FooterLink label="My Bookings" onPress={() => router.push('/(tabs)/booking')} />
+            )}
           </View>
 
           {/* Contact */}
