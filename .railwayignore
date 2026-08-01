@@ -1,0 +1,12 @@
+# Railway builds only the web export — exclude everything the web build
+# doesn't need. Keeps `railway up` uploads small (ios/ alone is ~1 GB).
+node_modules/
+ios/
+android/
+dist/
+.expo/
+.git/
+coverage/
+docs/
+*.log
+.env*

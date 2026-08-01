@@ -10,7 +10,7 @@
 #   EXPO_PUBLIC_WEB_URL (set after the first deploy assigns a domain)
 
 [build]
-builder = "NIXPACKS"
+builder = "RAILPACK"
 buildCommand = "npm run build:web"
 
 [deploy]
