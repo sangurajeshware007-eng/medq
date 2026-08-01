@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EcgLoader from '../components/EcgLoader';
 import Seo from '../components/web/Seo';
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
@@ -392,7 +393,7 @@ export default function NearMeScreen() {
       {/* List */}
       {isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <EcgLoader width={140} height={36} />
           <Text style={styles.loadingText}>Finding hospitals near you…</Text>
         </View>
       ) : filteredHospitals.length === 0 ? (

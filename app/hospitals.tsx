@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EcgLoader from '../components/EcgLoader';
 import HoverLift from '../components/web/HoverLift';
 import Seo from '../components/web/Seo';
 import WebFooter from '../components/web/WebFooter';
@@ -400,7 +401,7 @@ export default function HospitalsScreen() {
       {/* List */}
       {isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <EcgLoader width={140} height={36} />
           <Text style={styles.loadingTxt}>Finding hospitals near you…</Text>
         </View>
       ) : filtered.length === 0 ? (

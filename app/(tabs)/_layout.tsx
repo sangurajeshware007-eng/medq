@@ -4,6 +4,7 @@ import React from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import EcgLoader from '../../components/EcgLoader';
 import ErrorFallback from '../../components/ErrorFallback';
 import { Colors } from '../../constants/Colors';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
@@ -85,7 +86,7 @@ export default function TabLayout() {
   if (initializing) {
     return (
       <View style={styles.splash}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <EcgLoader width={140} height={36} />
       </View>
     );
   }

@@ -39,7 +39,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../components/Button';
 import Card from '../../components/Card';
-import InjectionSuccessAnimation from '../../components/InjectionSuccessAnimation';
 import LocalizedName from '../../components/LocalizedName';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
@@ -108,9 +107,6 @@ function BookingFlowScreenInner() {
   // not enough to know where to send the booking.
   const [selection, setSelection] = useState<{ hospitalId: string; slot: TimeSlot } | null>(null);
   const [step, setStep] = useState<'slots' | 'payment' | 'success'>('slots');
-  // Post-confirm celebration overlay (syringe-to-shoulder); shown between
-  // API success and the success screen.
-  const [showInjection, setShowInjection] = useState(false);
   const [loading, setLoading] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [bookingRef, setBookingRef] = useState<string | null>(null);
@@ -229,8 +225,7 @@ function BookingFlowScreenInner() {
       // Invalidate slots query so availability updates immediately
       queryClient.invalidateQueries({ queryKey: ['doctor', id, 'slots', selectedDateStr] });
       setLoading(false);
-      // Celebrate first (syringe → shoulder), then reveal the success screen.
-      setShowInjection(true);
+      setStep('success');
     } catch (err: any) {
       setLoading(false);
       // AxiosError keeps status on err.response; plain ApiError puts it on err directly
@@ -577,6 +572,7 @@ function BookingFlowScreenInner() {
             title={t('confirmBooking')}
             onPress={handleConfirm}
             loading={loading}
+            loadingIndicator="injection"
             size="large"
             variant="success"
             style={styles.fullBtn}
@@ -584,17 +580,6 @@ function BookingFlowScreenInner() {
           />
         )}
       </View>
-
-      {/* Booking-confirmed celebration: syringe glides into the patient's
-          shoulder, then the success screen takes over. */}
-      {showInjection && (
-        <InjectionSuccessAnimation
-          onDone={() => {
-            setShowInjection(false);
-            setStep('success');
-          }}
-        />
-      )}
     </SafeAreaView>
   );
 }

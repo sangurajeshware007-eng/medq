@@ -1,13 +1,15 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Hospital, Lightbulb, Zap, ChevronLeft } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Hospital, Lightbulb, Zap, ChevronLeft } from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
-import { useLanguage } from '../../context/LanguageContext';
+
+import Button from '../../components/Button';
+import EcgLoader from '../../components/EcgLoader';
 import LiveTokenCard from '../../components/LiveTokenCard';
 import LocalizedName from '../../components/LocalizedName';
-import Button from '../../components/Button';
+import { Colors } from '../../constants/Colors';
+import { useLanguage } from '../../context/LanguageContext';
 import { useDoctor } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
 
@@ -40,7 +42,7 @@ export default function TokenTrackerScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <EcgLoader width={140} height={36} />
         </View>
       </SafeAreaView>
     );
@@ -65,11 +67,7 @@ export default function TokenTrackerScreen() {
       </View>
 
       <View style={styles.content}>
-        <LiveTokenCard
-          currentToken={currentToken}
-          yourToken={yourToken}
-          doctorName={doctor.name}
-        />
+        <LiveTokenCard currentToken={currentToken} yourToken={yourToken} doctorName={doctor.name} />
 
         <View style={styles.hospitalInfo}>
           <Hospital size={24} color={Colors.primary} strokeWidth={1.8} />
@@ -150,7 +148,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 3, opacity: 0.08, radius: 10, elevation: 3 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 3,
+      opacity: 0.08,
+      radius: 10,
+      elevation: 3,
+    }),
   },
   hospitalEmoji: {
     fontSize: 28,
@@ -186,7 +190,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 3, opacity: 0.08, radius: 10, elevation: 3 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 3,
+      opacity: 0.08,
+      radius: 10,
+      elevation: 3,
+    }),
   },
   tipsTitle: {
     fontSize: 15,

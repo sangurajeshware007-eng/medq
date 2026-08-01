@@ -33,6 +33,7 @@ import Button from '../../components/Button';
 import Card from '../../components/Card';
 import HeroSection from '../../components/DoctorProfile/HeroSection';
 import DoctorProfileStrength from '../../components/DoctorProfileStrength';
+import EcgLoader from '../../components/EcgLoader';
 import LocalizedName from '../../components/LocalizedName';
 import Seo from '../../components/web/Seo';
 import WebFooter from '../../components/web/WebFooter';
@@ -84,7 +85,7 @@ export default function DoctorProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <EcgLoader width={140} height={36} />
           <Text style={styles.loadingText}>Loading doctor details...</Text>
         </View>
       </SafeAreaView>

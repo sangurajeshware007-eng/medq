@@ -34,6 +34,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EcgLoader from '../../components/EcgLoader';
 import LocalizedName from '../../components/LocalizedName';
 import Seo from '../../components/web/Seo';
 import { Colors } from '../../constants/Colors';
@@ -81,7 +82,7 @@ export default function HospitalDetailScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.errorContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <EcgLoader width={140} height={36} />
           <Text style={styles.errorTitle}>Loading hospital…</Text>
         </View>
       </SafeAreaView>

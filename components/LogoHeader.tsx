@@ -18,7 +18,12 @@ const LOGO = require('../assets/logo/new/logo-icon.png');
  * Shared logo header — shown at the top of every tab.
  * Displays the MedQ+ brand, location picker, and language toggle.
  */
-export default function LogoHeader() {
+interface LogoHeaderProps {
+  /** Brand width in px (height follows the PNG's 2.65:1 ratio). */
+  logoWidth?: number;
+}
+
+export default function LogoHeader({ logoWidth = 105 }: LogoHeaderProps) {
   const router = useRouter();
   const { displayName, detecting } = useLocation();
   const { t } = useLanguage();
@@ -31,7 +36,11 @@ export default function LogoHeader() {
     <View style={styles.header}>
       <View style={styles.headerTop}>
         {/* Brand wordmark — assets/logo/new/logo-icon.png */}
-        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+        <Image
+          source={LOGO}
+          style={[styles.logo, { width: logoWidth, height: Math.round(logoWidth / 2.65) }]}
+          resizeMode="contain"
+        />
 
         {/* Location pill — sits to the right of the logo, fills available width */}
         <TouchableOpacity

@@ -24,6 +24,9 @@ import { crossPlatformShadow } from '../../utils/shadow';
 import LanguageToggle from '../LanguageToggle';
 
 const LOGO = require('../../assets/logo/new/logo-icon.png');
+// Brand size knob — source PNG is 671×253 (≈2.65:1); keep that ratio.
+const LOGO_WIDTH = 132;
+const LOGO_HEIGHT = Math.round(LOGO_WIDTH / 2.65);
 
 const CHROME_FREE_PREFIXES = ['/login', '/otp', '/register', '/complete-profile', '/onboarding'];
 
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 16,
   },
-  logo: { width: 95, height: 36 },
+  logo: { width: LOGO_WIDTH, height: LOGO_HEIGHT },
   spacer: { flex: 1 },
   locationPill: {
     flexDirection: 'row',

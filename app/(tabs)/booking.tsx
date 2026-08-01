@@ -30,6 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import EcgLoader from '../../components/EcgLoader';
 import LogoHeader from '../../components/LogoHeader';
 import RatingForm from '../../components/RatingForm';
 import { Colors } from '../../constants/Colors';
@@ -232,7 +233,7 @@ function BookingScreenInner() {
         {/* Loading state */}
         {isLoading ? (
           <View style={styles.emptyState}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <EcgLoader width={140} height={36} />
           </View>
         ) : error ? (
           /* Error state */

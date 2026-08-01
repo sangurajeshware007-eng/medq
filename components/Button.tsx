@@ -1,14 +1,12 @@
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import type { ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+
 import { Colors } from '../constants/Colors';
 import { crossPlatformShadow } from '../utils/shadow';
+
+import EcgLoader from './EcgLoader';
+import InjectionLoader from './InjectionLoader';
 
 interface ButtonProps {
   title: string;
@@ -16,6 +14,12 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'success' | 'danger';
   size?: 'small' | 'medium' | 'large';
   loading?: boolean;
+  /**
+   * Loading visual: 'ecg' (heart-monitor trace — the app default),
+   * 'injection' (syringe travelling to the patient — booking confirm),
+   * or 'spinner' (plain ActivityIndicator).
+   */
+  loadingIndicator?: 'ecg' | 'injection' | 'spinner';
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
@@ -28,6 +32,7 @@ export default function Button({
   variant = 'primary',
   size = 'medium',
   loading = false,
+  loadingIndicator = 'ecg',
   disabled = false,
   style,
   textStyle,
@@ -45,7 +50,12 @@ export default function Button({
       case 'secondary':
         return { ...base, backgroundColor: Colors.primaryLight };
       case 'outline':
-        return { ...base, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: Colors.primary };
+        return {
+          ...base,
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderColor: Colors.primary,
+        };
       case 'success':
         return { ...base, backgroundColor: Colors.trustGreen };
       case 'danger':
@@ -75,7 +85,13 @@ export default function Button({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? Colors.primary : Colors.white} />
+        (() => {
+          const loaderColor =
+            variant === 'outline' || variant === 'secondary' ? Colors.primary : Colors.white;
+          if (loadingIndicator === 'injection') return <InjectionLoader color={loaderColor} />;
+          if (loadingIndicator === 'spinner') return <ActivityIndicator color={loaderColor} />;
+          return <EcgLoader width={84} height={22} color={loaderColor} speed={900} />;
+        })()
       ) : (
         <>
           {icon}
@@ -115,7 +131,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: 4, opacity: 0.18, radius: 12, elevation: 5 }),
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: 4,
+      opacity: 0.18,
+      radius: 12,
+      elevation: 5,
+    }),
   },
   text: {
     fontWeight: '700',
@@ -125,4 +147,3 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
-
