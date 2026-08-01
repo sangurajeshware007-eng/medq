@@ -16,9 +16,16 @@ interface LiveTokenCardProps {
   currentToken: number;
   yourToken: number;
   doctorName: string;
+  /** Server-computed wait estimate; falls back to 5 min/token heuristic. */
+  estimatedWaitMinutes?: number;
 }
 
-export default function LiveTokenCard({ currentToken, yourToken, doctorName }: LiveTokenCardProps) {
+export default function LiveTokenCard({
+  currentToken,
+  yourToken,
+  doctorName,
+  estimatedWaitMinutes,
+}: LiveTokenCardProps) {
   const { t } = useLanguage();
 
   // Subtle heartbeat on the live number — makes "it's live" visceral without
@@ -29,7 +36,11 @@ export default function LiveTokenCard({ currentToken, yourToken, doctorName }: L
     Animated.spring(pulse, { toValue: 1, friction: 3, useNativeDriver: USE_NATIVE_DRIVER }).start();
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.04, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(pulse, {
+          toValue: 1.04,
+          duration: 900,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
         Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
     );
@@ -38,7 +49,8 @@ export default function LiveTokenCard({ currentToken, yourToken, doctorName }: L
   }, [currentToken, pulse]);
 
   const tokensBefore = Math.max(0, yourToken - currentToken);
-  const estimatedMinutes = tokensBefore * 5;
+  const estimatedMinutes =
+    typeof estimatedWaitMinutes === 'number' ? estimatedWaitMinutes : tokensBefore * 5;
   const isYourTurn = currentToken >= yourToken;
   const progress = yourToken > 0 ? Math.min((currentToken / yourToken) * 100, 100) : 0;
 

@@ -34,7 +34,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AdminDashboard from '../../components/dashboard/AdminDashboard';
 import HospitalManagerDashboard from '../../components/dashboard/HospitalManagerDashboard';
 import HeartbeatBanner from '../../components/HeartbeatBanner';
+import EmergencySheet from '../../components/home/EmergencySheet';
+import NextVisitCard from '../../components/home/NextVisitCard';
 import QuickActions from '../../components/home/QuickActions';
+import SymptomChips from '../../components/home/SymptomChips';
 import WelcomeHero from '../../components/home/WelcomeHero';
 import HospitalCard from '../../components/HospitalCard';
 import LanguageToggle from '../../components/LanguageToggle';
@@ -52,6 +55,7 @@ import { useNearbyHospitals, useNearbyDoctors, useNearbyCityImages } from '../..
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import type { DoctorListItem } from '../../services/doctorService';
 import type { HospitalListItem } from '../../services/hospitalService';
+import { isAvailableToday } from '../../utils/availability';
 import { formatShortCredential } from '../../utils/doctorCredential';
 import { reverseGeocode } from '../../utils/geocode';
 import { crossPlatformShadow } from '../../utils/shadow';
@@ -72,6 +76,9 @@ export default function HomeScreen() {
   // ── GPS location state ─────────────────────────────────────────────
   const [gpsCoords, setGpsCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState(false);
+
+  // ── Emergency bottom sheet (nearest 24×7 hospitals) ────────────────
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
 
   // ── Auto-detect GPS location on mount (skip if user already has a location) ──
   useEffect(() => {
@@ -274,6 +281,11 @@ export default function HomeScreen() {
       <Text style={styles.compactSpec} numberOfLines={1}>
         {item.specialization}
       </Text>
+      {isAvailableToday(item.availableDays) && (
+        <View style={styles.availableTodayChip}>
+          <Text style={styles.availableTodayText}>Available today</Text>
+        </View>
+      )}
       <View style={styles.compactRatingRow}>
         {/* Social proof first when it exists; never show empty ratings */}
         {typeof item.rating === 'number' && item.rating > 0 && (
@@ -345,8 +357,14 @@ export default function HomeScreen() {
           backgroundImages={heroBackgroundImages}
         />
 
+        {/* One-tap symptom entry — lowest-friction path into search */}
+        <SymptomChips />
+
         {/* Living brand strip: ECG pulse travels to the heart's lub-dub */}
         <HeartbeatBanner />
+
+        {/* Logged-in: earliest upcoming visit, live queue strip on visit day */}
+        <NextVisitCard />
 
         {/* Quick action grid */}
         <QuickActions
@@ -360,7 +378,7 @@ export default function HomeScreen() {
             })
           }
           onMyBookings={() => router.push('/(tabs)/booking')}
-          onEmergency={() => router.push('/(tabs)/search')}
+          onEmergency={() => setEmergencyOpen(true)}
         />
 
         {/* Loading State — skeleton cards read faster than a spinner */}
@@ -550,6 +568,13 @@ export default function HomeScreen() {
         <View style={styles.bottomSpacer} />
         <WebFooter />
       </ScrollView>
+
+      {/* Emergency: nearest 24×7 hospitals with call/directions */}
+      <EmergencySheet
+        visible={emergencyOpen}
+        onClose={() => setEmergencyOpen(false)}
+        hospitals={hospitalsList}
+      />
     </SafeAreaView>
   );
 }
@@ -960,6 +985,18 @@ const styles = StyleSheet.create({
   compactRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  availableTodayChip: {
+    backgroundColor: Colors.trustGreenLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  availableTodayText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.trustGreen,
   },
   compactStar: {
     fontSize: 12,

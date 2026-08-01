@@ -44,6 +44,7 @@ import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useDoctor, useDoctorSlots, useCreateBooking } from '../../hooks/useApiHooks';
+import { bookingService } from '../../services/bookingService';
 import type { TimeSlot, Session } from '../../services/doctorService';
 import { crossPlatformShadow } from '../../utils/shadow';
 
@@ -110,6 +111,7 @@ function BookingFlowScreenInner() {
   const [loading, setLoading] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [bookingRef, setBookingRef] = useState<string | null>(null);
+  const [tokenNumber, setTokenNumber] = useState<number | null>(null);
 
   // List of hospitals to render. Prefer the new affiliations array; fall back
   // to the legacy single `hospital` field so older payloads still work.
@@ -222,6 +224,15 @@ function BookingFlowScreenInner() {
       });
       setBookingId(String(response.bookingId));
       setBookingRef(response.bookingRef);
+      // The create response carries only id+ref — fetch the booking detail for
+      // the real assigned token. Non-blocking: the success screen simply omits
+      // the token badge if this lookup fails.
+      try {
+        const detail = await bookingService.getById(response.bookingId);
+        setTokenNumber(detail.tokenNumber ?? null);
+      } catch {
+        setTokenNumber(null);
+      }
       // Invalidate slots query so availability updates immediately
       queryClient.invalidateQueries({ queryKey: ['doctor', id, 'slots', selectedDateStr] });
       setLoading(false);
@@ -273,8 +284,6 @@ function BookingFlowScreenInner() {
       ]);
     }
   };
-
-  const tokenNumber = bookingId || Math.floor(Math.random() * 15) + 1;
 
   const openDirectionsToHospital = () => {
     const lat = doctor?.hospital?.locationLat;
@@ -340,6 +349,11 @@ function BookingFlowScreenInner() {
                 <Clock size={14} color={Colors.textSecondary} strokeWidth={2} />
                 <Text style={styles.successInfoLabel}>{selection?.slot.time}</Text>
               </View>
+              {typeof tokenNumber === 'number' && (
+                <View style={styles.tokenBadge}>
+                  <Text style={styles.tokenBadgeText}>Token #{tokenNumber}</Text>
+                </View>
+              )}
             </View>
           </Card>
 
@@ -368,7 +382,23 @@ function BookingFlowScreenInner() {
           )}
 
           <View style={styles.successActions}>
-            {/* Track Token feature hidden for MVP */}
+            {typeof tokenNumber === 'number' && bookingId && (
+              <Button
+                title="Track live token"
+                onPress={() =>
+                  router.replace({
+                    pathname: '/token/[id]',
+                    params: {
+                      id: String(doctor.id),
+                      bookingId,
+                      myToken: String(tokenNumber),
+                    },
+                  })
+                }
+                size="medium"
+                style={styles.successBtn}
+              />
+            )}
             <Button
               title={t('goHome')}
               variant="outline"
@@ -1348,6 +1378,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     fontWeight: '600',
+  },
+  tokenBadge: {
+    backgroundColor: Colors.tokenPurpleLight,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.tokenPurple + '30',
+  },
+  tokenBadgeText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.tokenPurple,
   },
   tokenCard: {
     width: '100%',

@@ -21,6 +21,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 
+import { isAvailableToday } from '../utils/availability';
 import { formatShortCredential } from '../utils/doctorCredential';
 import { crossPlatformShadow } from '../utils/shadow';
 
@@ -48,6 +49,8 @@ interface PremiumDoctorCardProps {
     distanceKm?: number;
     /** Short qualification string — takes the rating pill's slot in phase 1. */
     degree?: string;
+    /** Day-of-week ints (0=Sun … 6=Sat) with active availability. */
+    availableDays?: number[];
   };
   onPress: () => void;
   style?: ViewStyle;
@@ -127,6 +130,11 @@ export default function PremiumDoctorCard({
                   <View style={styles.metaChipNeutral}>
                     <Clock size={10} color="#475569" strokeWidth={2.5} />
                     <Text style={styles.metaChipNeutralText}>{doctor.experience}+ yrs</Text>
+                  </View>
+                )}
+                {isAvailableToday(doctor.availableDays) && (
+                  <View style={styles.metaChipGreen}>
+                    <Text style={styles.metaChipGreenText}>Available today</Text>
                   </View>
                 )}
               </View>
@@ -379,6 +387,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#475569',
+  },
+  metaChipGreen: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  metaChipGreenText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803D',
   },
   fullHospitalRow: {
     flexDirection: 'row',

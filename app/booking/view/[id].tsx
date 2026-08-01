@@ -379,7 +379,11 @@ export default function BookingDetailScreen() {
             onPress={() =>
               router.push({
                 pathname: '/token/[id]',
-                params: { id: data.doctorId },
+                params: {
+                  id: data.doctorId,
+                  bookingId: data.id,
+                  myToken: String(data.tokenNumber),
+                },
               })
             }
             activeOpacity={0.75}

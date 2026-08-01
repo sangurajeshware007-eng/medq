@@ -37,6 +37,7 @@ import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useVoiceSearch } from '../../hooks/useVoiceSearch';
 import type { DoctorListItem } from '../../services/doctorService';
 import type { HospitalListItem } from '../../services/hospitalService';
+import { isAvailableToday } from '../../utils/availability';
 import { formatShortCredential } from '../../utils/doctorCredential';
 import { matchDoctors, matchHospitals, matchedSpecializations } from '../../utils/fuzzySearch';
 import { categories, diseaseMapping } from '../../utils/mockData';
@@ -553,6 +554,12 @@ function DoctorCard({ doctor, onPress }: { doctor: DoctorListItem; onPress: () =
             numberOfLines={1}
           />
         </View>
+
+        {isAvailableToday(doctor.availableDays) && (
+          <View style={styles.availableTodayChip}>
+            <Text style={styles.availableTodayText}>Available today</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.doctorAction}>
@@ -811,6 +818,15 @@ const styles = StyleSheet.create({
   doctorMeta: { fontSize: 11, color: Colors.textSecondary },
   doctorDist: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
   doctorHospital: { fontSize: 11, color: Colors.textLight },
+  availableTodayChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.trustGreenLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  availableTodayText: { fontSize: 10, fontWeight: '800', color: Colors.trustGreen },
 
   doctorAction: { justifyContent: 'center', alignItems: 'center', marginLeft: 8, gap: 6 },
   feeTag: {
