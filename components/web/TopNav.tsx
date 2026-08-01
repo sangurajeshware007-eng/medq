@@ -23,35 +23,9 @@ import { useAuthStore } from '../../store/authStore';
 import { crossPlatformShadow } from '../../utils/shadow';
 import LanguageToggle from '../LanguageToggle';
 
-import { isHovered } from './HoverLift';
-
 const LOGO = require('../../assets/logo/new/logo-icon.png');
 
 const CHROME_FREE_PREFIXES = ['/login', '/otp', '/register', '/complete-profile', '/onboarding'];
-
-interface NavItem {
-  label: string;
-  href: string;
-  /** Exact-match routes (home) — prefix matching would highlight everywhere. */
-  exact?: boolean;
-}
-
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
-  return (
-    <Link href={item.href} asChild>
-      <Pressable
-        accessibilityRole="link"
-        style={(state) => [
-          styles.navLink,
-          isHovered(state) && styles.navLinkHovered,
-          active && styles.navLinkActive,
-        ]}
-      >
-        <Text style={[styles.navLinkText, active && styles.navLinkTextActive]}>{item.label}</Text>
-      </Pressable>
-    </Link>
-  );
-}
 
 export default function TopNav() {
   // All hooks run unconditionally; gating happens below.
@@ -65,17 +39,6 @@ export default function TopNav() {
   if (Platform.OS !== 'web' || !isMd) return null;
   if (CHROME_FREE_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
-  const isDoctor = user?.role === 'DOCTOR';
-  const items: NavItem[] = [
-    { label: 'Home', href: '/', exact: true },
-    { label: 'Find Doctors', href: '/search' },
-    { label: 'Hospitals', href: '/hospitals' },
-    { label: 'My Bookings', href: '/booking' },
-    ...(isDoctor ? [{ label: 'Dashboard', href: '/dashboard' }] : []),
-  ];
-  const isActive = (item: NavItem) =>
-    item.exact ? pathname === item.href : pathname.startsWith(item.href);
-
   const firstName = user?.name?.split(' ')[0] || 'Profile';
 
   return (
@@ -88,13 +51,7 @@ export default function TopNav() {
           </Pressable>
         </Link>
 
-        {/* Primary navigation */}
-        <View style={styles.links}>
-          {items.map((item) => (
-            <NavLink key={item.href} item={item} active={isActive(item)} />
-          ))}
-        </View>
-
+        {/* Primary navigation lives in the SideNav rail */}
         <View style={styles.spacer} />
 
         {/* Location */}
@@ -159,8 +116,6 @@ const styles = StyleSheet.create({
   },
   inner: {
     width: '100%',
-    maxWidth: 1200,
-    alignSelf: 'center',
     height: 64,
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,16 +123,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   logo: { width: 95, height: 36 },
-  links: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 12 },
-  navLink: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  navLinkHovered: { backgroundColor: Colors.background },
-  navLinkActive: { backgroundColor: Colors.primaryLight },
-  navLinkText: { fontSize: 14.5, fontWeight: '600', color: Colors.textSecondary },
-  navLinkTextActive: { color: Colors.primary, fontWeight: '700' },
   spacer: { flex: 1 },
   locationPill: {
     flexDirection: 'row',

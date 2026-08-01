@@ -13,12 +13,13 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AnimatedSplash from '../components/AnimatedSplash';
 import ErrorFallback from '../components/ErrorFallback';
+import SideNav from '../components/web/SideNav';
 import TopNav from '../components/web/TopNav';
 import WebShell from '../components/web/WebShell';
 import { Colors } from '../constants/Colors';
@@ -69,50 +70,55 @@ export default function RootLayout() {
               <LanguageProvider>
                 <LocationProvider>
                   <StatusBar style="dark" />
-                  {/* Desktop-web navbar — renders null on native/phone widths */}
+                  {/* Desktop-web chrome — both render null on native/phone widths */}
                   <TopNav />
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      contentStyle: { backgroundColor: Colors.background },
-                    }}
-                  >
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                    <Stack.Screen
-                      name="doctor/[id]"
-                      options={{ headerShown: false, presentation: 'card' }}
-                    />
-                    <Stack.Screen
-                      name="hospital/[id]"
-                      options={{ headerShown: false, presentation: 'card' }}
-                    />
-                    <Stack.Screen
-                      name="booking/[id]"
-                      options={{ headerShown: false, presentation: 'card' }}
-                    />
-                    <Stack.Screen
-                      name="token/[id]"
-                      options={{ headerShown: false, presentation: 'card' }}
-                    />
-                    <Stack.Screen
-                      name="nearme"
-                      options={{ headerShown: false, presentation: 'card' }}
-                    />
-                    <Stack.Screen
-                      name="location-picker"
-                      options={{ headerShown: false, presentation: 'modal' }}
-                    />
-                    <Stack.Screen
-                      name="onboarding"
-                      options={{ headerShown: false, presentation: 'card' }}
-                    />
-                    {/* reception/* and staff/* are auto-discovered by Expo Router from
+                  <View style={styles.body}>
+                    <SideNav />
+                    <View style={styles.content}>
+                      <Stack
+                        screenOptions={{
+                          headerShown: false,
+                          contentStyle: { backgroundColor: Colors.background },
+                        }}
+                      >
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                        <Stack.Screen
+                          name="doctor/[id]"
+                          options={{ headerShown: false, presentation: 'card' }}
+                        />
+                        <Stack.Screen
+                          name="hospital/[id]"
+                          options={{ headerShown: false, presentation: 'card' }}
+                        />
+                        <Stack.Screen
+                          name="booking/[id]"
+                          options={{ headerShown: false, presentation: 'card' }}
+                        />
+                        <Stack.Screen
+                          name="token/[id]"
+                          options={{ headerShown: false, presentation: 'card' }}
+                        />
+                        <Stack.Screen
+                          name="nearme"
+                          options={{ headerShown: false, presentation: 'card' }}
+                        />
+                        <Stack.Screen
+                          name="location-picker"
+                          options={{ headerShown: false, presentation: 'modal' }}
+                        />
+                        <Stack.Screen
+                          name="onboarding"
+                          options={{ headerShown: false, presentation: 'card' }}
+                        />
+                        {/* reception/* and staff/* are auto-discovered by Expo Router from
                       app/reception/*.tsx and app/staff/*.tsx — explicit Stack.Screen
                       entries with name="reception" / "staff" caused the
                       "No route named …" warnings because there is no group layout
                       at those paths. Default Stack options apply automatically. */}
-                  </Stack>
+                      </Stack>
+                    </View>
+                  </View>
                   {!splashDone && <AnimatedSplash onDone={() => setSplashDone(true)} />}
                 </LocationProvider>
               </LanguageProvider>
@@ -123,3 +129,10 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  // Desktop web: SideNav sits beside the router content; on native SideNav
+  // is null and these wrappers are visually inert (flex column of one).
+  body: { flex: 1, flexDirection: 'row' },
+  content: { flex: 1 },
+});

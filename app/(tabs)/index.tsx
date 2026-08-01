@@ -511,17 +511,22 @@ export default function HomeScreen() {
                 {t('topDoctors')} — {displayName}
               </Text>
             </View>
-            {shuffledDoctors.map((doctor) => (
-              <PremiumDoctorCard
-                key={doctor.id}
-                doctor={doctor}
-                onPress={() =>
-                  router.push({ pathname: '/doctor/[id]', params: { id: String(doctor.id) } })
-                }
-                style={styles.fullDoctorCard}
-                variant="full"
-              />
-            ))}
+            <View style={isDesktopWeb && styles.webGrid}>
+              {shuffledDoctors.map((doctor) => (
+                <View key={doctor.id} style={isDesktopWeb && { width: `${100 / 2 - 1}%` }}>
+                  <HoverLift>
+                    <PremiumDoctorCard
+                      doctor={doctor}
+                      onPress={() =>
+                        router.push({ pathname: '/doctor/[id]', params: { id: String(doctor.id) } })
+                      }
+                      style={styles.fullDoctorCard}
+                      variant="full"
+                    />
+                  </HoverLift>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
