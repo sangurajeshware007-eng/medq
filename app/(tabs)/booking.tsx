@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import {
   ClipboardList,
   Hospital,
@@ -57,7 +57,16 @@ function ensureDoctorPrefix(name: string): string {
   return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
 }
 
+/** Browsing is anonymous; bookings are personal — gate before any inner hooks run. */
 export default function BookingScreen() {
+  const { isLoggedIn } = useAuth();
+  if (!isLoggedIn) {
+    return <Redirect href="/(auth)/login" />;
+  }
+  return <BookingScreenInner />;
+}
+
+function BookingScreenInner() {
   const { t } = useLanguage();
   const { logout } = useAuth();
   const router = useRouter();

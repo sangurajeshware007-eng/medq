@@ -14,6 +14,7 @@ import {
   Stethoscope,
   Briefcase,
   IdCard,
+  Share2,
 } from 'lucide-react-native';
 import React, { useState, useMemo } from 'react';
 import {
@@ -24,6 +25,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,6 +36,7 @@ import DoctorProfileStrength from '../../components/DoctorProfileStrength';
 import LocalizedName from '../../components/LocalizedName';
 import Seo from '../../components/web/Seo';
 import WebFooter from '../../components/web/WebFooter';
+import { ENV } from '../../config/environment';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -131,6 +134,14 @@ export default function DoctorProfileScreen() {
       : {}),
   };
 
+  // One shared profile into a family WhatsApp group is the cheapest growth
+  // channel in tier-2 India — make sharing one tap.
+  const shareOnWhatsApp = () => {
+    const link = ENV.webUrl ? `${ENV.webUrl}/doctor/${id}` : '';
+    const text = `${doctor.name}${doctor.specialization ? ` (${doctor.specialization})` : ''} — book an appointment on MedQ+${link ? `\n${link}` : ''}`;
+    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`).catch(() => {});
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Seo
@@ -145,7 +156,9 @@ export default function DoctorProfileScreen() {
           <ChevronLeft size={24} color={Colors.text} strokeWidth={2.5} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('aboutDoctor')}</Text>
-        <View style={{ width: 32 }} />
+        <TouchableOpacity onPress={shareOnWhatsApp} style={styles.backBtn} hitSlop={8}>
+          <Share2 size={20} color={Colors.primary} strokeWidth={2.2} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>

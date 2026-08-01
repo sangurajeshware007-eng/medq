@@ -20,9 +20,21 @@ import {
   Hospital,
   Stethoscope,
   ChevronRight,
+  ShieldCheck,
+  Banknote,
+  BadgePercent,
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  Animated,
+  Platform,
+} from 'react-native';
 
 import { Colors } from '../../constants/Colors';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
@@ -46,6 +58,8 @@ interface WelcomeHeroProps {
   doctorsCount?: number;
   searchPlaceholder?: string;
   onSearchPress: () => void;
+  /** When provided, the search bar becomes a real input; submitting calls this. */
+  onSearchSubmit?: (query: string) => void;
   /**
    * One or more landmark photos. When provided, replaces the default teal
    * canvas with these images (auto-cycling every 5 s when count > 1) plus a
@@ -70,12 +84,34 @@ export default function WelcomeHero({
   doctorsCount,
   searchPlaceholder = 'Search doctors, hospitals, or symptoms…',
   onSearchPress,
+  onSearchSubmit,
   backgroundImages,
 }: WelcomeHeroProps) {
   const { text: greeting, Icon: GreetingIcon } = getGreeting();
   // Desktop web: taller hero, larger type, constrained search width.
   const { isMd, isLg } = useBreakpoint();
   const wide = Platform.OS === 'web' && isMd;
+
+  // Rotating placeholder suggestions — nudge users toward what search understands.
+  const suggestions = [
+    'Try "fever"…',
+    'Try "bukhar" / "बुखार"…',
+    'Try "dentist near me"…',
+    'Try "ಜ್ವರ" or a doctor name…',
+    'Try "skin specialist"…',
+  ];
+  const [searchText, setSearchText] = useState('');
+  const [suggestionIdx, setSuggestionIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSuggestionIdx((i) => (i + 1) % suggestions.length), 3500);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const submitSearch = () => {
+    const q = searchText.trim();
+    if (onSearchSubmit && q) onSearchSubmit(q);
+    else onSearchPress();
+  };
 
   const images = backgroundImages ?? [];
   const hasImages = images.length > 0;
@@ -134,20 +170,41 @@ export default function WelcomeHero({
         </Text>
       </View>
 
-      {/* Layer 5: glass search bar */}
-      <TouchableOpacity
-        style={[styles.searchBar, wide && styles.searchBarWide]}
-        onPress={onSearchPress}
-        activeOpacity={0.85}
-      >
+      {/* Layer 5: glass search bar — a real input; typing here lands on /search */}
+      <View style={[styles.searchBar, wide && styles.searchBarWide]}>
         <View style={styles.searchIcon}>
           <Search size={16} color={Colors.primary} strokeWidth={2.5} />
         </View>
-        <Text style={styles.searchPlaceholder} numberOfLines={1}>
-          {searchPlaceholder}
-        </Text>
-        <ChevronRight size={16} color="rgba(255,255,255,0.7)" strokeWidth={2.5} />
-      </TouchableOpacity>
+        <TextInput
+          style={styles.searchInput}
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder={searchText ? searchPlaceholder : suggestions[suggestionIdx]}
+          placeholderTextColor="rgba(255,255,255,0.75)"
+          returnKeyType="search"
+          onSubmitEditing={submitSearch}
+          autoCorrect={false}
+        />
+        <TouchableOpacity onPress={submitSearch} hitSlop={8} activeOpacity={0.8}>
+          <ChevronRight size={18} color="rgba(255,255,255,0.9)" strokeWidth={2.5} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Trust strip — the reasons to book here, right where the eye lands */}
+      <View style={styles.trustRow}>
+        <View style={styles.trustChip}>
+          <ShieldCheck size={11} color={Colors.white} strokeWidth={2.5} />
+          <Text style={styles.trustText}>Verified doctors</Text>
+        </View>
+        <View style={styles.trustChip}>
+          <Banknote size={11} color={Colors.white} strokeWidth={2.5} />
+          <Text style={styles.trustText}>Pay at clinic</Text>
+        </View>
+        <View style={styles.trustChip}>
+          <BadgePercent size={11} color={Colors.white} strokeWidth={2.5} />
+          <Text style={styles.trustText}>₹0 booking fee</Text>
+        </View>
+      </View>
 
       {/* Layer 6: stat pills */}
       {(hospitalsCount !== undefined || doctorsCount !== undefined) && (
@@ -371,6 +428,32 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.white,
+    paddingVertical: 0,
+  },
+  trustRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  trustChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  trustText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.white,
   },
   searchPlaceholder: {
     flex: 1,

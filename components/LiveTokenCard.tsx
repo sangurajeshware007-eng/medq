@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { Radio, PartyPopper, Clock } from 'lucide-react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+
 import { Colors } from '../constants/Colors';
 import { useLanguage } from '../context/LanguageContext';
 import { crossPlatformShadow } from '../utils/shadow';
+
 import LocalizedName from './LocalizedName';
 
 interface LiveTokenCardProps {
@@ -12,12 +14,24 @@ interface LiveTokenCardProps {
   doctorName: string;
 }
 
-export default function LiveTokenCard({
-  currentToken,
-  yourToken,
-  doctorName,
-}: LiveTokenCardProps) {
+export default function LiveTokenCard({ currentToken, yourToken, doctorName }: LiveTokenCardProps) {
   const { t } = useLanguage();
+
+  // Subtle heartbeat on the live number — makes "it's live" visceral without
+  // being distracting. Restarts on every token change for a stronger beat.
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    pulse.setValue(1.12);
+    Animated.spring(pulse, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.04, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [currentToken, pulse]);
 
   const tokensBefore = Math.max(0, yourToken - currentToken);
   const estimatedMinutes = tokensBefore * 5;
@@ -37,13 +51,19 @@ export default function LiveTokenCard({
       {/* Current Token — HUGE & Glowing */}
       <View style={styles.tokenSection}>
         <Text style={styles.tokenLabel}>{t('currentToken')}</Text>
-        <View style={[styles.tokenCircle, isYourTurn && styles.tokenCircleActive]}>
+        <Animated.View
+          style={[
+            styles.tokenCircle,
+            isYourTurn && styles.tokenCircleActive,
+            { transform: [{ scale: pulse }] },
+          ]}
+        >
           <View style={[styles.tokenInner, isYourTurn && styles.tokenInnerActive]}>
             <Text style={[styles.tokenNumber, isYourTurn && styles.tokenNumberActive]}>
               {currentToken}
             </Text>
           </View>
-        </View>
+        </Animated.View>
       </View>
 
       {/* Your Token Badge */}
@@ -89,7 +109,15 @@ export default function LiveTokenCard({
       )}
 
       {!isYourTurn && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            marginTop: 12,
+          }}
+        >
           <Clock size={14} color={Colors.textSecondary} strokeWidth={2} />
           <Text style={styles.pleaseWait}>{t('pleaseWait')}</Text>
         </View>
@@ -105,7 +133,13 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 16,
     alignItems: 'center',
-    ...crossPlatformShadow({ color: Colors.tokenPurple, offsetY: 8, opacity: 0.15, radius: 24, elevation: 10 }),
+    ...crossPlatformShadow({
+      color: Colors.tokenPurple,
+      offsetY: 8,
+      opacity: 0.15,
+      radius: 24,
+      elevation: 10,
+    }),
     borderWidth: 1.5,
     borderColor: Colors.tokenPurpleLight,
   },
@@ -169,12 +203,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 4,
     borderColor: Colors.tokenPurple,
-    ...crossPlatformShadow({ color: Colors.tokenPurple, offsetY: 0, opacity: 0.35, radius: 16, elevation: 8 }),
+    ...crossPlatformShadow({
+      color: Colors.tokenPurple,
+      offsetY: 0,
+      opacity: 0.35,
+      radius: 16,
+      elevation: 8,
+    }),
   },
   tokenInnerActive: {
     backgroundColor: Colors.trustGreenLight,
     borderColor: Colors.trustGreen,
-    ...crossPlatformShadow({ color: Colors.trustGreen, offsetY: 0, opacity: 0.35, radius: 16, elevation: 8 }),
+    ...crossPlatformShadow({
+      color: Colors.trustGreen,
+      offsetY: 0,
+      opacity: 0.35,
+      radius: 16,
+      elevation: 8,
+    }),
   },
   tokenNumber: {
     fontSize: 52,
@@ -202,7 +248,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     borderColor: Colors.gold,
-    ...crossPlatformShadow({ color: Colors.gold, offsetY: 2, opacity: 0.2, radius: 6, elevation: 3 }),
+    ...crossPlatformShadow({
+      color: Colors.gold,
+      offsetY: 2,
+      opacity: 0.2,
+      radius: 6,
+      elevation: 3,
+    }),
   },
   yourTokenNumber: {
     fontSize: 22,

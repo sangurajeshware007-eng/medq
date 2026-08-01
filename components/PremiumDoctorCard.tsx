@@ -1,12 +1,30 @@
-
+import {
+  GraduationCap,
+  Hospital,
+  MapPin,
+  ShieldCheck,
+  ArrowRight,
+  Clock,
+  Star,
+} from 'lucide-react-native';
 import React from 'react';
-import { Text, View, StyleSheet, Image, ViewStyle, Platform } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withRepeat, withTiming, withSequence, interpolate } from 'react-native-reanimated';
+import type { ViewStyle } from 'react-native';
+import { Text, View, StyleSheet, Image, Platform } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
-import { crossPlatformShadow } from '../utils/shadow';
-import { GraduationCap, Hospital, MapPin, ShieldCheck, ArrowRight, Clock } from 'lucide-react-native';
-import LocalizedName from './LocalizedName';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withRepeat,
+  withTiming,
+  withSequence,
+  interpolate,
+} from 'react-native-reanimated';
+
 import { formatShortCredential } from '../utils/doctorCredential';
+import { crossPlatformShadow } from '../utils/shadow';
+
+import LocalizedName from './LocalizedName';
 
 // ── Phase 1: reviews hidden ──────────────────────────────────────────────
 // The rating/star UI is intentionally replaced with a qualification pill
@@ -36,17 +54,18 @@ interface PremiumDoctorCardProps {
   variant?: 'full' | 'compact';
 }
 
-export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'compact' }: PremiumDoctorCardProps) {
+export default function PremiumDoctorCard({
+  doctor,
+  onPress,
+  style,
+  variant = 'compact',
+}: PremiumDoctorCardProps) {
   const scale = useSharedValue(1);
   const floatY = useSharedValue(0);
 
   // Fluid floating animation using sine wave
   React.useEffect(() => {
-    floatY.value = withRepeat(
-      withTiming(1, { duration: 2200 }),
-      -1,
-      true
-    );
+    floatY.value = withRepeat(withTiming(1, { duration: 2200 }), -1, true);
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -54,10 +73,7 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
     const translateY = interpolate(floatY.value, [0, 1], [-10, 6]);
     const animatedScale = interpolate(floatY.value, [0, 1], [1, 0.98]);
     return {
-      transform: [
-        { scale: scale.value * animatedScale },
-        { translateY },
-      ],
+      transform: [{ scale: scale.value * animatedScale }, { translateY }],
       zIndex: 99,
       elevation: 12, // Android pop-out
     };
@@ -89,9 +105,7 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
               {/* Name — single line, full available width */}
               <View style={styles.nameRow}>
                 <LocalizedName name={doctor.name} style={styles.fullName} numberOfLines={1} />
-                {doctor.verified && (
-                  <ShieldCheck size={13} color="#10B981" strokeWidth={2.5} />
-                )}
+                {doctor.verified && <ShieldCheck size={13} color="#10B981" strokeWidth={2.5} />}
               </View>
 
               {/* Specialization — single line */}
@@ -104,7 +118,9 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
                 {credential !== '' && (
                   <View style={styles.metaChipGold}>
                     <GraduationCap size={10} color="#B45309" strokeWidth={2.5} />
-                    <Text style={styles.metaChipGoldText} numberOfLines={1}>{credential}</Text>
+                    <Text style={styles.metaChipGoldText} numberOfLines={1}>
+                      {credential}
+                    </Text>
                   </View>
                 )}
                 {doctor.experience > 0 && (
@@ -126,9 +142,7 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
                   />
                   {doctor.distanceKm != null && (
                     <View style={styles.distancePill}>
-                      <Text style={styles.fullDistanceText}>
-                        {doctor.distanceKm.toFixed(1)} km
-                      </Text>
+                      <Text style={styles.fullDistanceText}>{doctor.distanceKm.toFixed(1)} km</Text>
                     </View>
                   )}
                 </View>
@@ -144,13 +158,11 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
                 <Text style={styles.feeLabel}>Consultation</Text>
                 <Text style={styles.feeAmount}>₹{doctor.consultationFee}</Text>
               </View>
-            ) : <View />}
+            ) : (
+              <View />
+            )}
 
-            <TouchableOpacity
-              style={styles.bookCta}
-              onPress={onPress}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={styles.bookCta} onPress={onPress} activeOpacity={0.85}>
               <Text style={styles.bookCtaText}>Book Now</Text>
               <ArrowRight size={14} color="#fff" strokeWidth={2.5} />
             </TouchableOpacity>
@@ -173,22 +185,26 @@ export default function PremiumDoctorCard({ doctor, onPress, style, variant = 'c
         <LocalizedName name={doctor.name} style={styles.name} numberOfLines={1} />
         <Text style={styles.spec}>{doctor.specialization}</Text>
         <View style={styles.row}>
-          {/* Phase 1: credential instead of rating */}
-          {/* <Star size={14} color="#FFD700" />
-          <Text style={styles.rating}>{doctor.rating.toFixed(1)}</Text> */}
+          {/* Social proof when it exists; never an empty/zero rating */}
+          {typeof doctor.rating === 'number' && doctor.rating > 0 && (
+            <>
+              <Star size={13} color="#FFD700" fill="#FFD700" strokeWidth={0} />
+              <Text style={[styles.rating, { marginLeft: 2 }]}>{doctor.rating.toFixed(1)} ·</Text>
+            </>
+          )}
           {formatShortCredential(doctor.degree) !== '' ? (
             <>
               <GraduationCap size={13} color="#D69E2E" strokeWidth={2.5} />
-              <Text style={[styles.rating, { marginLeft: 3 }]}>{formatShortCredential(doctor.degree)}</Text>
+              <Text style={[styles.rating, { marginLeft: 3 }]}>
+                {formatShortCredential(doctor.degree)}
+              </Text>
               <Text style={styles.exp}>· {doctor.experience} yr</Text>
             </>
           ) : (
             <Text style={styles.exp}>{doctor.experience} yr exp</Text>
           )}
         </View>
-        {doctor.consultationFee && (
-          <Text style={styles.fee}>₹{doctor.consultationFee}</Text>
-        )}
+        {doctor.consultationFee && <Text style={styles.fee}>₹{doctor.consultationFee}</Text>}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -260,18 +276,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     overflow: 'hidden',
-    ...crossPlatformShadow({ color: '#0A7E8C', opacity: 0.10, offsetY: 6, radius: 16, elevation: 6 }),
+    ...crossPlatformShadow({
+      color: '#0A7E8C',
+      opacity: 0.1,
+      offsetY: 6,
+      radius: 16,
+      elevation: 6,
+    }),
   },
   accentStripe: {
     position: 'absolute',
-    left: 0, top: 0, bottom: 0,
+    left: 0,
+    top: 0,
+    bottom: 0,
     width: 4,
     backgroundColor: '#0A7E8C',
   },
   topRow: {
     flexDirection: 'row',
     padding: 14,
-    paddingLeft: 18,                  // accommodate the 4 px accent stripe
+    paddingLeft: 18, // accommodate the 4 px accent stripe
     gap: 12,
   },
   fullImageSection: {
@@ -280,14 +304,15 @@ const styles = StyleSheet.create({
   fullDoctorImage: {
     width: 72,
     height: 72,
-    borderRadius: 18,                 // squircle — feels more modern than a circle
+    borderRadius: 18, // squircle — feels more modern than a circle
     backgroundColor: '#F1F5F9',
   },
   fullVerifiedBadge: {
     position: 'absolute',
     bottom: -4,
     right: -4,
-    width: 22, height: 22,
+    width: 22,
+    height: 22,
     borderRadius: 11,
     backgroundColor: '#10B981',
     justifyContent: 'center',
@@ -298,7 +323,7 @@ const styles = StyleSheet.create({
   fullInfoSection: {
     flex: 1,
     flexShrink: 1,
-    minWidth: 0,                      // critical — lets numberOfLines truncate cleanly
+    minWidth: 0, // critical — lets numberOfLines truncate cleanly
     justifyContent: 'center',
     gap: 4,
   },
@@ -419,7 +444,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    ...crossPlatformShadow({ color: '#0A7E8C', opacity: 0.25, offsetY: 4, radius: 8, elevation: 4 }),
+    ...crossPlatformShadow({
+      color: '#0A7E8C',
+      opacity: 0.25,
+      offsetY: 4,
+      radius: 8,
+      elevation: 4,
+    }),
   },
   bookCtaText: {
     color: '#fff',
@@ -428,4 +459,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 });
-

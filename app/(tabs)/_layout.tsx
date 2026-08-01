@@ -1,4 +1,4 @@
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Home, Search, Calendar, HeartPulse, User, LayoutDashboard } from 'lucide-react-native';
 import React from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
@@ -70,7 +70,7 @@ function BookingTabIcon({ focused }: { focused: boolean }) {
 }
 
 export default function TabLayout() {
-  const { isLoggedIn, initializing, user } = useAuthStore();
+  const { initializing, user } = useAuthStore();
   const insets = useSafeAreaInsets();
   const { isMd } = useBreakpoint();
   const isDoctor = user?.role === 'DOCTOR';
@@ -90,9 +90,10 @@ export default function TabLayout() {
     );
   }
 
-  if (!isLoggedIn) {
-    return <Redirect href="/(auth)/login" />;
-  }
+  // Anonymous browsing is allowed: home/search/hospitals are public.
+  // Personal surfaces gate themselves (booking tab, dashboard, booking flow
+  // all render <Redirect href="/(auth)/login" /> when logged out; the profile
+  // tab shows its own sign-in prompt).
 
   return (
     <Tabs

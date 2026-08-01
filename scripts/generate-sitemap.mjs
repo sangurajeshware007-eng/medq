@@ -20,10 +20,8 @@ const DIST = resolve(process.cwd(), 'dist');
 const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL || '').replace(/\/$/, '');
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://medq-be-qa.up.railway.app').replace(/\/$/, '');
 
-// NOTE: '/' and '/search' are login-gated today ((tabs)/_layout redirects
-// anonymous visitors to /login), so crawlers can't index them — list only the
-// genuinely public pages. Add them back if browsing is ever opened up.
-const STATIC_PATHS = ['/hospitals', '/nearme'];
+// Browsing is anonymous since 2026-08 — home and search are indexable.
+const STATIC_PATHS = ['/', '/search', '/hospitals', '/nearme'];
 
 async function fetchIds(path) {
   try {

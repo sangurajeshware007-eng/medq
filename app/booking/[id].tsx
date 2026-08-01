@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Hospital,
   Calendar,
@@ -79,7 +79,16 @@ function parseSlotTime(time: string): { startMin: number; endMin: number } | nul
   return Number.isFinite(startMin) && Number.isFinite(endMin) ? { startMin, endMin } : null;
 }
 
+/** Browsing is anonymous; creating a booking requires an account. */
 export default function BookingFlowScreen() {
+  const { isLoggedIn } = useAuth();
+  if (!isLoggedIn) {
+    return <Redirect href="/(auth)/login" />;
+  }
+  return <BookingFlowScreenInner />;
+}
+
+function BookingFlowScreenInner() {
   const { id, hospitalId: hospitalIdParam } = useLocalSearchParams<{
     id: string;
     hospitalId?: string;
@@ -113,16 +122,18 @@ export default function BookingFlowScreen() {
       );
     }
     if (doctor.hospital) {
-      return [{
-        hospitalId: doctor.hospital.id,
-        hospitalName: doctor.hospital.name,
-        address: doctor.hospital.address ?? '',
-        locationLat: doctor.hospital.locationLat ?? 0,
-        locationLng: doctor.hospital.locationLng ?? 0,
-        consultationFee: doctor.consultationFee ?? doctor.fee ?? 0,
-        isPrimary: true,
-        availableDays: [],
-      }];
+      return [
+        {
+          hospitalId: doctor.hospital.id,
+          hospitalName: doctor.hospital.name,
+          address: doctor.hospital.address ?? '',
+          locationLat: doctor.hospital.locationLat ?? 0,
+          locationLng: doctor.hospital.locationLng ?? 0,
+          consultationFee: doctor.consultationFee ?? doctor.fee ?? 0,
+          isPrimary: true,
+          availableDays: [],
+        },
+      ];
     }
     return [];
   }, [doctor]);
@@ -162,7 +173,10 @@ export default function BookingFlowScreen() {
     [selection],
   );
   const selectedHospitalName = useMemo(
-    () => (selection ? hospitalList.find((h) => h.hospitalId === selection.hospitalId)?.hospitalName ?? '' : ''),
+    () =>
+      selection
+        ? (hospitalList.find((h) => h.hospitalId === selection.hospitalId)?.hospitalName ?? '')
+        : '',
     [selection, hospitalList],
   );
 
@@ -324,9 +338,7 @@ export default function BookingFlowScreen() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Clock size={14} color={Colors.textSecondary} strokeWidth={2} />
-                <Text style={styles.successInfoLabel}>
-                  {selection?.slot.time}
-                </Text>
+                <Text style={styles.successInfoLabel}>{selection?.slot.time}</Text>
               </View>
             </View>
           </Card>
@@ -491,9 +503,7 @@ export default function BookingFlowScreen() {
                   <Clock size={13} color={Colors.textSecondary} strokeWidth={2} />
                   <Text style={styles.summaryLabel}>Time</Text>
                 </View>
-                <Text style={styles.summaryValue}>
-                  {selection?.slot.time}
-                </Text>
+                <Text style={styles.summaryValue}>{selection?.slot.time}</Text>
               </View>
               <View style={styles.summaryRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -629,7 +639,8 @@ function HospitalSlotsSection({
       .filter((s) => s.slots.length > 0);
   }, [sessions, excludedRange]);
 
-  const allHidden = !!excludedRange && !isLoading && sessions.length > 0 && sessionsToRender.length === 0;
+  const allHidden =
+    !!excludedRange && !isLoading && sessions.length > 0 && sessionsToRender.length === 0;
 
   return (
     <View style={styles.hospitalSection}>
@@ -652,9 +663,7 @@ function HospitalSlotsSection({
         </Text>
       ) : null}
 
-      {isLoading && (
-        <Text style={styles.hospitalSectionEmpty}>Checking availability…</Text>
-      )}
+      {isLoading && <Text style={styles.hospitalSectionEmpty}>Checking availability…</Text>}
       {!isLoading && sessions.length === 0 && (
         <Text style={styles.hospitalSectionEmpty}>No slots available for this date.</Text>
       )}

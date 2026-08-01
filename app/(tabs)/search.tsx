@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Search as SearchIcon,
   Hospital,
@@ -25,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CategoryCard from '../../components/CategoryCard';
 import LocalizedName from '../../components/LocalizedName';
 import LogoHeader from '../../components/LogoHeader';
+import SkeletonCard from '../../components/SkeletonCard';
 import HoverLift from '../../components/web/HoverLift';
 import Seo from '../../components/web/Seo';
 import WebFooter from '../../components/web/WebFooter';
@@ -70,12 +71,20 @@ export default function SearchScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const { selectedLocation } = useLocation();
+  // Seed the query from the hero search box (/search?q=fever).
+  const { q: qParam } = useLocalSearchParams<{ q?: string }>();
   // Result cards flow into 2 (md) / 3 (lg) columns on wide screens (web).
   const { select } = useBreakpoint();
   const resultColumns = select({ sm: 1, md: 2, lg: 3 });
 
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  React.useEffect(() => {
+    if (qParam) {
+      setQuery(String(qParam));
+      setSelectedCategory(null);
+    }
+  }, [qParam]);
   const [sortKey, setSortKey] = useState<SortKey>('rating');
   const [feePresetIdx, setFeePresetIdx] = useState(0); // 0 = "Any fee"
   const [showFilters, setShowFilters] = useState(false);
@@ -173,6 +182,15 @@ export default function SearchScreen() {
     if (query.length < 2) return [];
     return matchHospitals(query, allHospitals);
   }, [allHospitals, query]);
+
+  // Fallback for empty results: the 3 nearest doctors regardless of filters —
+  // an empty state is where a patient gives up; give them a next step.
+  const nearestFallback = useMemo(() => {
+    if (filteredDoctors.length > 0) return [];
+    return [...allDoctors]
+      .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+      .slice(0, 3);
+  }, [filteredDoctors.length, allDoctors]);
 
   const isSearching = query.length >= 2;
   const selectedCategoryName = selectedCategory
@@ -347,8 +365,10 @@ export default function SearchScreen() {
         {/* Loading */}
         {doctorsLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={Colors.primary} />
             <Text style={styles.loadingText}>{t('loading')}</Text>
+            <SkeletonCard variant="row" />
+            <SkeletonCard variant="row" />
+            <SkeletonCard variant="row" />
           </View>
         )}
 
@@ -457,6 +477,31 @@ export default function SearchScreen() {
                   <Text style={styles.emptyDesc}>
                     {feePresetIdx !== 0 ? t('wideFeeHint') : t('spellingsOkHint')}
                   </Text>
+                  <TouchableOpacity style={styles.clearFiltersBtn} onPress={clearAll}>
+                    <Text style={styles.clearFiltersTxt}>Clear filters & search</Text>
+                  </TouchableOpacity>
+
+                  {/* Never a dead end: surface the nearest doctors who can at
+                      least see the patient and refer onward. */}
+                  {nearestFallback.length > 0 && (
+                    <View style={styles.fallbackBlock}>
+                      <Text style={styles.fallbackTitle}>
+                        Nearby doctors you can consult instead
+                      </Text>
+                      {nearestFallback.map((doctor) => (
+                        <DoctorCard
+                          key={doctor.id}
+                          doctor={doctor}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/doctor/[id]',
+                              params: { id: String(doctor.id) },
+                            })
+                          }
+                        />
+                      ))}
+                    </View>
+                  )}
                 </View>
               )
             )}
@@ -482,9 +527,13 @@ function DoctorCard({ doctor, onPress }: { doctor: DoctorListItem; onPress: () =
         <Text style={styles.doctorSpec}>{doctor.specialization}</Text>
 
         <View style={styles.doctorStatsRow}>
-          {/* Phase 1: qualification instead of rating */}
-          {/* <Star size={11} color={Colors.gold} fill={Colors.gold} strokeWidth={0} />
-          <Text style={styles.doctorStar}>{doctor.rating?.toFixed(1) ?? '—'}</Text> */}
+          {/* Social proof when it exists; never an empty/zero rating */}
+          {typeof doctor.rating === 'number' && doctor.rating > 0 && (
+            <>
+              <Star size={11} color={Colors.gold} fill={Colors.gold} strokeWidth={0} />
+              <Text style={styles.doctorStar}>{doctor.rating.toFixed(1)} · </Text>
+            </>
+          )}
           {formatShortCredential(doctor.degree) !== '' && (
             <Text style={styles.doctorStar}>{formatShortCredential(doctor.degree)}</Text>
           )}
@@ -706,6 +755,21 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
 
   emptyState: { alignItems: 'center', paddingVertical: 40 },
+  clearFiltersBtn: {
+    marginTop: 14,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  clearFiltersTxt: { color: Colors.primary, fontWeight: '700', fontSize: 14 },
+  fallbackBlock: { marginTop: 24, alignSelf: 'stretch' },
+  fallbackTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.text,
+    marginBottom: 10,
+  },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',

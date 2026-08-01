@@ -39,6 +39,7 @@ import HospitalCard from '../../components/HospitalCard';
 import LanguageToggle from '../../components/LanguageToggle';
 import LogoHeader from '../../components/LogoHeader';
 import PremiumDoctorCard from '../../components/PremiumDoctorCard';
+import SkeletonCard from '../../components/SkeletonCard';
 import HoverLift from '../../components/web/HoverLift';
 import Seo from '../../components/web/Seo';
 import WebFooter from '../../components/web/WebFooter';
@@ -273,7 +274,14 @@ export default function HomeScreen() {
         {item.specialization}
       </Text>
       <View style={styles.compactRatingRow}>
-        {/* Phase 1: qualification instead of rating */}
+        {/* Social proof first when it exists; never show empty ratings */}
+        {typeof item.rating === 'number' && item.rating > 0 && (
+          <>
+            <Text style={styles.compactStar}>★</Text>
+            <Text style={styles.compactRating}>{item.rating.toFixed(1)}</Text>
+            <Text style={styles.compactExp}> · </Text>
+          </>
+        )}
         {formatShortCredential(item.degree) !== '' ? (
           <>
             <Text style={styles.compactRating} numberOfLines={1}>
@@ -332,6 +340,7 @@ export default function HomeScreen() {
           doctorsCount={doctorsList.length || undefined}
           searchPlaceholder={`${t('search')} ${t('topDoctors').toLowerCase()}…`}
           onSearchPress={() => router.push('/(tabs)/search')}
+          onSearchSubmit={(q) => router.push({ pathname: '/(tabs)/search', params: { q } })}
           backgroundImages={heroBackgroundImages}
         />
 
@@ -350,13 +359,17 @@ export default function HomeScreen() {
           onEmergency={() => router.push('/(tabs)/search')}
         />
 
-        {/* Loading State */}
+        {/* Loading State — skeleton cards read faster than a spinner */}
         {isLoading && !refreshing && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>
               {detecting ? t('detectingYourLocation') : t('findingDoctorsNearYou')}
             </Text>
+            <View style={styles.skeletonRow}>
+              <SkeletonCard />
+              <SkeletonCard />
+              {isDesktopWeb && <SkeletonCard />}
+            </View>
           </View>
         )}
 
@@ -798,6 +811,12 @@ const styles = StyleSheet.create({
   gridDoctorCard: {
     width: '100%',
     marginRight: 0,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    marginTop: 14,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
   },
   bottomSpacer: {
     height: 24,
