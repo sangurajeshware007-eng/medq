@@ -33,6 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AdminDashboard from '../../components/dashboard/AdminDashboard';
 import HospitalManagerDashboard from '../../components/dashboard/HospitalManagerDashboard';
+import HeartbeatBanner from '../../components/HeartbeatBanner';
 import QuickActions from '../../components/home/QuickActions';
 import WelcomeHero from '../../components/home/WelcomeHero';
 import HospitalCard from '../../components/HospitalCard';
@@ -343,6 +344,9 @@ export default function HomeScreen() {
           onSearchSubmit={(q) => router.push({ pathname: '/(tabs)/search', params: { q } })}
           backgroundImages={heroBackgroundImages}
         />
+
+        {/* Living brand strip: ECG pulse travels to the heart's lub-dub */}
+        <HeartbeatBanner />
 
         {/* Quick action grid */}
         <QuickActions

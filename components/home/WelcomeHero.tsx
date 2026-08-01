@@ -93,12 +93,14 @@ export default function WelcomeHero({
   const wide = Platform.OS === 'web' && isMd;
 
   // Rotating placeholder suggestions — nudge users toward what search understands.
+  // Phase 1: English/Latin only (transliterated terms like "bukhar" still
+  // resolve via the fuzzy disease search).
   const suggestions = [
     'Try "fever"…',
-    'Try "bukhar" / "बुखार"…',
+    'Try "bukhar"…',
     'Try "dentist near me"…',
-    'Try "ಜ್ವರ" or a doctor name…',
     'Try "skin specialist"…',
+    'Try a doctor name…',
   ];
   const [searchText, setSearchText] = useState('');
   const [suggestionIdx, setSuggestionIdx] = useState(0);
