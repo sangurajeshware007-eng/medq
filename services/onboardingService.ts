@@ -23,15 +23,6 @@ const HOSPITAL_BASE = '/api/v1/onboarding/hospital';
 
 export type OnboardingStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
-export interface OnboardingStatusResponse {
-  status: OnboardingStatus;
-  currentStep: number;
-  totalSteps: number;
-  rejectionReason?: string;
-  submittedAt?: string;
-  reviewedAt?: string;
-}
-
 export interface DoctorProfilePayload {
   specialization: string;
   gender: string;
@@ -254,9 +245,6 @@ const onboardingService = {
   /** Submit doctor onboarding for review (Step 4) */
   submitDoctorOnboarding: () => api.post<SubmitResponse>(`${DOCTOR_BASE}/submit`),
 
-  /** Poll doctor onboarding status */
-  getDoctorStatus: () => api.get<OnboardingStatusResponse>(`${DOCTOR_BASE}/status`),
-
   /** Fetch all saved doctor onboarding data (for hydrating the form on return) */
   getDoctorOnboarding: () => api.get<DoctorOnboardingResponse>(`${DOCTOR_BASE}/profile`),
 
@@ -270,11 +258,13 @@ const onboardingService = {
   saveHospitalDocuments: (data: HospitalDocumentsPayload) =>
     api.post<{ message: string }>(`${HOSPITAL_BASE}/documents`, data),
 
-  /** Submit hospital onboarding for review (Step 3) */
-  submitHospitalOnboarding: () => api.post<SubmitResponse>(`${HOSPITAL_BASE}/submit`),
-
-  /** Poll hospital onboarding status */
-  getHospitalStatus: () => api.get<OnboardingStatusResponse>(`${HOSPITAL_BASE}/status`),
+  /**
+   * Submit hospital onboarding for review (Step 3).
+   * Returns the backend status summary — includes the created hospital's id,
+   * which the doctor-onboarding return path uses to auto-link it.
+   */
+  submitHospitalOnboarding: () =>
+    api.post<HospitalOnboardingStatusSummary>(`${HOSPITAL_BASE}/submit`),
 
   /** Fetch all saved hospital onboarding data (for hydrating the form on return) */
   getHospitalData: () => api.get<HospitalOnboardingData>(`${HOSPITAL_BASE}/data`),

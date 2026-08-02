@@ -204,11 +204,16 @@ export function useHospitalOnboardingHydration(editMode: boolean = false): Hydra
 
   const hydrate = useCallback(async () => {
     try {
-      const statusRes = await onboardingService.getHospitalStatus();
-      setStatus(statusRes.status);
-      setRejectionReason(statusRes.rejectionReason);
+      // Backend returns { hospitalId, approvalStatus, rejectionReason, ... } —
+      // NOT { status, currentStep }. Reading the wrong field here used to make
+      // this always undefined, so the layout's PENDING/APPROVED redirect never
+      // fired and approved owners landed back on "Submit for Approval".
+      const statusRes = await onboardingService.getHospitalOnboardingStatus();
+      const mapped = toOnboardingStatus(statusRes.approvalStatus);
+      setStatus(mapped);
+      setRejectionReason(statusRes.rejectionReason ?? undefined);
 
-      if (statusRes.status === 'NOT_STARTED') {
+      if (mapped === 'NOT_STARTED') {
         setResumeStep(1);
         setLoading(false);
         return;
@@ -216,10 +221,9 @@ export function useHospitalOnboardingHydration(editMode: boolean = false): Hydra
 
       // In normal onboarding, don't re-hydrate once submitted/approved — but
       // edit-mode (owner re-editing an approved hospital) NEEDS the data.
-      const skipHydrate =
-        !editMode && (statusRes.status === 'PENDING' || statusRes.status === 'APPROVED');
+      const skipHydrate = !editMode && (mapped === 'PENDING' || mapped === 'APPROVED');
       if (skipHydrate) {
-        setResumeStep(statusRes.currentStep);
+        setResumeStep(1);
         setLoading(false);
         return;
       }
@@ -271,9 +275,8 @@ export function useHospitalOnboardingHydration(editMode: boolean = false): Hydra
       }
 
       const nextStep = completedSteps.length > 0 ? Math.min(Math.max(...completedSteps) + 1, 3) : 1;
-      const step = statusRes.currentStep > 0 ? statusRes.currentStep : nextStep;
-      store.setCurrentStep(step);
-      setResumeStep(step);
+      store.setCurrentStep(nextStep);
+      setResumeStep(nextStep);
     } catch {
       setResumeStep(store.currentStep);
     } finally {

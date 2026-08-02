@@ -56,6 +56,10 @@ export default function ApprovalPendingScreen() {
   const [polling, setPolling] = useState(true);
   const [profileData, setProfileData] = useState<DoctorOnboardingResponse | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  // On the HOSPITAL status screen: does this user also have an unsubmitted
+  // (DRAFT) doctor application? Shown as a warning so they don't walk away
+  // believing the doctor application was submitted along with the hospital.
+  const [doctorDraft, setDoctorDraft] = useState(false);
 
   const resetDoctorStore = useDoctorOnboardingStore((s) => s.resetStore);
   const resetHospitalStore = useHospitalOnboardingStore((s) => s.resetStore);
@@ -103,6 +107,22 @@ export default function ApprovalPendingScreen() {
   }, [fetchStatus, fetchProfileData]);
 
   useEffect(() => {
+    if (isDoctor) return;
+    let cancelled = false;
+    onboardingService
+      .getDoctorOnboardingStatus()
+      .then((res) => {
+        if (!cancelled) setDoctorDraft(res.approvalStatus === 'DRAFT');
+      })
+      .catch(() => {
+        /* no doctor application — nothing to warn about */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDoctor]);
+
+  useEffect(() => {
     if (!polling) return;
     const interval = setInterval(fetchStatus, POLL_INTERVAL);
     return () => clearInterval(interval);
@@ -129,11 +149,18 @@ export default function ApprovalPendingScreen() {
               </View>
             </View>
 
-            <Text style={styles.title}>You're in the{'\n'}review queue!</Text>
-            <Text style={styles.subtitle}>
-              Our medical verification team personally reviews every profile — ensuring only
-              qualified doctors serve patients on MedQ+.
+            <Text style={styles.title}>
+              {isDoctor ? "You're in the\nreview queue!" : 'Hospital under\nreview!'}
             </Text>
+            <Text style={styles.subtitle}>
+              {isDoctor
+                ? 'Our medical verification team personally reviews every profile — ensuring only qualified doctors serve patients on MedQ+.'
+                : 'Our verification team personally reviews every hospital — ensuring patients can trust every facility on MedQ+.'}
+            </Text>
+
+            {doctorDraft && (
+              <DoctorDraftNotice onContinue={() => router.replace('/onboarding/doctor/step1')} />
+            )}
 
             {/* Review journey */}
             <View style={styles.timeline}>
@@ -168,7 +195,9 @@ export default function ApprovalPendingScreen() {
                   <Shield size={16} color={Colors.primary} strokeWidth={2} />
                 </View>
                 <Text style={styles.infoText}>
-                  Medical council verifies your registration number and credentials
+                  {isDoctor
+                    ? 'Medical council verifies your registration number and credentials'
+                    : 'We verify your hospital registration number and documents'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
@@ -176,7 +205,9 @@ export default function ApprovalPendingScreen() {
                   <Users size={16} color={Colors.primary} strokeWidth={2} />
                 </View>
                 <Text style={styles.infoText}>
-                  Our team reviews your qualifications and hospital affiliations
+                  {isDoctor
+                    ? 'Our team reviews your qualifications and hospital affiliations'
+                    : 'Our team reviews your facility details and departments'}
                 </Text>
               </View>
               <View style={[styles.infoRow, { marginBottom: 0 }]}>
@@ -236,7 +267,7 @@ export default function ApprovalPendingScreen() {
                         <ReviewRow
                           label="Consultation Fee"
                           value={
-                            profileData.profile.consultationFee != null
+                            profileData.profile.consultationFee !== null
                               ? `₹${profileData.profile.consultationFee}`
                               : '—'
                           }
@@ -440,11 +471,21 @@ export default function ApprovalPendingScreen() {
                 <CheckCircle size={52} color={Colors.trustGreen} strokeWidth={1.5} />
               </View>
             </View>
-            <Text style={styles.title}>You're approved!{'\n'}Welcome aboard!</Text>
-            <Text style={styles.subtitle}>
-              Your profile is now live. Patients across the region can discover and book
-              appointments with you.
+            <Text style={styles.title}>
+              {isDoctor
+                ? "You're approved!\nWelcome aboard!"
+                : 'Hospital approved!\nWelcome aboard!'}
             </Text>
+            <Text style={styles.subtitle}>
+              {isDoctor
+                ? 'Your profile is now live. Patients across the region can discover and book appointments with you.'
+                : 'Your hospital is now live. Doctors can link to it and patients can discover it across the region.'}
+            </Text>
+
+            {doctorDraft && (
+              <DoctorDraftNotice onContinue={() => router.replace('/onboarding/doctor/step1')} />
+            )}
+
             <Button
               title="Go to Home"
               onPress={() => router.replace('/(tabs)')}
@@ -486,6 +527,28 @@ export default function ApprovalPendingScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * Warning shown on the HOSPITAL status screen when the user's DOCTOR
+ * application is still an unsubmitted draft — the single most common point
+ * of confusion: "I submitted!" (the hospital) while the doctor application
+ * quietly stays DRAFT and admin never sees it.
+ */
+function DoctorDraftNotice({ onContinue }: { onContinue: () => void }) {
+  return (
+    <View style={styles.draftNotice}>
+      <View style={styles.draftNoticeHeader}>
+        <Stethoscope size={16} color="#B45309" strokeWidth={2} />
+        <Text style={styles.draftNoticeTitle}>Your doctor application is not submitted yet</Text>
+      </View>
+      <Text style={styles.draftNoticeText}>
+        This screen is only about your hospital. Your doctor application is still a draft — the
+        admin team can't review it until you finish and submit it.
+      </Text>
+      <Button title="Continue Doctor Application" onPress={onContinue} size="medium" />
+    </View>
   );
 }
 
@@ -727,4 +790,19 @@ const styles = StyleSheet.create({
   rejectionText: { fontSize: 14, color: Colors.text, lineHeight: 20 },
 
   pollingNote: { fontSize: 12, color: Colors.textLight, textAlign: 'center', marginTop: 4 },
+
+  // ── Doctor-draft warning (shown on hospital status screen) ───────────────
+  draftNotice: {
+    width: '100%',
+    backgroundColor: Colors.goldLight,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.gold,
+    gap: 10,
+  },
+  draftNoticeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  draftNoticeTitle: { flex: 1, fontSize: 14, fontWeight: '800', color: '#92400E' },
+  draftNoticeText: { fontSize: 13, color: '#92400E', lineHeight: 19 },
 });

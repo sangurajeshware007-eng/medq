@@ -11,6 +11,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 import { Colors } from '../../../constants/Colors';
 import { useHospitalOnboardingHydration } from '../../../hooks/useOnboardingHydration';
+import { useHospitalOnboardingStore } from '../../../store/hospitalOnboardingStore';
 
 export default function HospitalOnboardingLayout() {
   const router = useRouter();
@@ -27,9 +28,17 @@ export default function HospitalOnboardingLayout() {
 
     // In edit mode, never redirect — let the owner stay on whichever step they
     // navigated to. In normal onboarding, PENDING/APPROVED users get bounced
-    // to the approval-pending screen.
+    // to the approval-pending screen — unless they came from doctor-onboarding
+    // step 3 ("Add Hospital"): their hospital is already registered, so send
+    // them straight back to link it and finish the doctor application.
     if (!isEditMode && (status === 'PENDING' || status === 'APPROVED')) {
-      router.replace('/onboarding/approval-pending?type=hospital');
+      const { returnToDoctor, setReturnToDoctor } = useHospitalOnboardingStore.getState();
+      if (returnToDoctor) {
+        setReturnToDoctor(false);
+        router.replace('/onboarding/doctor/step3');
+      } else {
+        router.replace('/onboarding/approval-pending?type=hospital');
+      }
       return;
     }
 

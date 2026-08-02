@@ -76,7 +76,6 @@ export type {
 export { default as onboardingService } from './onboardingService';
 export type {
   OnboardingStatus,
-  OnboardingStatusResponse,
   DoctorProfilePayload,
   DoctorDetailsPayload,
   DoctorHospitalsPayload,

@@ -2,15 +2,7 @@
  * Hospital Onboarding Step 3 — Review & Submit
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  ChevronLeft,
-  Building2,
-  FileText,
-  MapPin,
-  Phone,
-  Clock,
-  CheckCircle,
-} from 'lucide-react-native';
+import { ChevronLeft, Building2, FileText, MapPin, Phone, CheckCircle } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +12,7 @@ import Card from '../../../components/Card';
 import StepProgressBar from '../../../components/onboarding/StepProgressBar';
 import { Colors } from '../../../constants/Colors';
 import onboardingService from '../../../services/onboardingService';
+import { useDoctorOnboardingStore } from '../../../store/doctorOnboardingStore';
 import { useHospitalOnboardingStore } from '../../../store/hospitalOnboardingStore';
 import type { HospitalAddressStep } from '../../../store/hospitalOnboardingStore';
 import { crossPlatformShadow } from '../../../utils/shadow';
@@ -69,7 +62,35 @@ export default function HospitalStep3() {
         return;
       }
 
-      await onboardingService.submitHospitalOnboarding();
+      const result = await onboardingService.submitHospitalOnboarding();
+
+      // Came here from doctor-onboarding step 3 ("Add Hospital")? Auto-link the
+      // new hospital to the doctor application and go straight back — otherwise
+      // the doctor application is abandoned as a DRAFT while the user believes
+      // "Submit for Approval" covered it.
+      if (store.returnToDoctor) {
+        store.setReturnToDoctor(false);
+        if (result.hospitalId) {
+          const doctorStore = useDoctorOnboardingStore.getState();
+          const alreadyLinked = doctorStore.linkedHospitals.some(
+            (h) => h.hospitalId === result.hospitalId,
+          );
+          if (!alreadyLinked) {
+            doctorStore.addLinkedHospital({
+              hospitalId: result.hospitalId,
+              hospitalName: profile.name,
+              address: formatAddress(profile.address),
+              consultationFee: doctorStore.profile.consultationFee,
+              roomNumber: '',
+              isPrimary: doctorStore.linkedHospitals.length === 0,
+              availability: [],
+            });
+          }
+        }
+        router.replace('/onboarding/doctor/step3');
+        return;
+      }
+
       // Don't reset store here — keep data for re-edit if rejected.
       // Store is cleared when status transitions to APPROVED (via layout hydration).
       router.replace('/onboarding/approval-pending?type=hospital');

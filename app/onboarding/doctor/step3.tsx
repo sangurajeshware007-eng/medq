@@ -21,12 +21,14 @@ import Input from '../../../components/Input';
 import AvailabilityBuilder from '../../../components/onboarding/AvailabilityBuilder';
 import StepProgressBar from '../../../components/onboarding/StepProgressBar';
 import { Colors } from '../../../constants/Colors';
+import { useOwnHospital } from '../../../hooks/useOwnHospital';
 import hospitalService from '../../../services/hospitalService';
 import onboardingService from '../../../services/onboardingService';
 import {
   useDoctorOnboardingStore,
   type LinkedHospital,
 } from '../../../store/doctorOnboardingStore';
+import { useHospitalOnboardingStore } from '../../../store/hospitalOnboardingStore';
 import { crossPlatformShadow } from '../../../utils/shadow';
 
 import { formColumn } from '@/theme';
@@ -59,6 +61,12 @@ export default function DoctorStep3() {
   const [linkFee, setLinkFee] = useState(store.profile.consultationFee);
   const [linkRoom, setLinkRoom] = useState('');
   const [linkPrimary, setLinkPrimary] = useState(linkedHospitals.length === 0);
+
+  // The hospital this user registered themselves (hospital managers becoming
+  // doctors). Offered as a one-tap link so they never need "Add Hospital".
+  const { ownHospital } = useOwnHospital();
+  const ownHospitalLinked =
+    !!ownHospital && linkedHospitals.some((h) => h.hospitalId === ownHospital.id);
 
   // Refs used by the "Link Another Hospital" CTA to bounce the user back to the
   // search field after they've already linked one — saves them scrolling.
@@ -201,6 +209,32 @@ export default function DoctorStep3() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Your own hospital — one-tap link for hospital managers */}
+        {ownHospital && !ownHospitalLinked && (
+          <TouchableOpacity
+            style={styles.ownHospitalCard}
+            onPress={() =>
+              selectHospital({
+                id: ownHospital.id,
+                name: ownHospital.name,
+                address: ownHospital.address,
+                rating: 0,
+              })
+            }
+            activeOpacity={0.8}
+          >
+            <View style={styles.ownHospitalIcon}>
+              <Building2 size={18} color={Colors.trustGreen} strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.ownHospitalLabel}>Your hospital</Text>
+              <Text style={styles.ownHospitalName}>{ownHospital.name}</Text>
+              <Text style={styles.ownHospitalHint}>Tap to link it to your doctor profile</Text>
+            </View>
+            <Plus size={18} color={Colors.trustGreen} strokeWidth={2.5} />
+          </TouchableOpacity>
+        )}
+
         {/* Hospital Search */}
         <Text style={styles.sectionTitle}>
           {hasLinked ? 'Link Another Hospital' : 'Search & Link Hospitals'}
@@ -268,11 +302,16 @@ export default function DoctorStep3() {
         )}
 
         {/* Add Hospital CTA — always visible so doctors can register a new hospital
-            without leaving onboarding. State is persisted in Zustand, so they can
-            come back to this step seamlessly. */}
+            without leaving onboarding. returnToDoctor makes the hospital flow route
+            back HERE after registration (auto-linking the new hospital) instead of
+            stranding the user on the hospital status screen with the doctor
+            application still an unsubmitted DRAFT. */}
         <TouchableOpacity
           style={styles.addHospitalBtn}
-          onPress={() => router.push('/onboarding/hospital/step1')}
+          onPress={() => {
+            useHospitalOnboardingStore.getState().setReturnToDoctor(true);
+            router.push('/onboarding/hospital/step1');
+          }}
           activeOpacity={0.75}
         >
           <View style={styles.addHospitalIcon}>
@@ -476,6 +515,37 @@ const styles = StyleSheet.create({
   },
   linkAnotherTitle: { fontSize: 14, fontWeight: '800', color: Colors.primary },
   linkAnotherSub: { fontSize: 12, color: Colors.primary, opacity: 0.75, marginTop: 1 },
+  ownHospitalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: Colors.trustGreenLight,
+    borderWidth: 1.5,
+    borderColor: Colors.trustGreen + '66',
+    marginBottom: 14,
+  },
+  ownHospitalIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.trustGreen + '40',
+  },
+  ownHospitalLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.trustGreen,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  ownHospitalName: { fontSize: 15, fontWeight: '800', color: Colors.text, marginTop: 1 },
+  ownHospitalHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

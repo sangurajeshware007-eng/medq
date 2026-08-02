@@ -76,6 +76,15 @@ interface HospitalOnboardingState {
   completedSteps: number[];
   profile: HospitalProfileStep;
   documents: HospitalDocumentsStep;
+  /**
+   * Set when the user entered this flow from doctor-onboarding step 3
+   * ("Add Hospital"). After the hospital is registered (or found to already
+   * exist) the user is routed BACK to doctor step 3 instead of the hospital
+   * approval-pending screen — otherwise the doctor application silently dies
+   * as a DRAFT while the user believes it was submitted.
+   */
+  returnToDoctor: boolean;
+  setReturnToDoctor: (value: boolean) => void;
   setCurrentStep: (step: number) => void;
   markStepCompleted: (step: number) => void;
   updateProfile: (data: Partial<HospitalProfileStep>) => void;
@@ -134,6 +143,8 @@ export const useHospitalOnboardingStore = create<HospitalOnboardingState>()(
         documents: defaultDocs.map((d) => ({ ...d })),
         facilityPhotos: [],
       },
+      returnToDoctor: false,
+      setReturnToDoctor: (value) => set({ returnToDoctor: value }),
       setCurrentStep: (step) => set({ currentStep: step }),
       markStepCompleted: (step) =>
         set((s) => ({
@@ -184,6 +195,7 @@ export const useHospitalOnboardingStore = create<HospitalOnboardingState>()(
         set({
           currentStep: 1,
           completedSteps: [],
+          returnToDoctor: false,
           profile: { ...defaultProfile },
           documents: {
             registrationNumber: '',
