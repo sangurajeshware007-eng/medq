@@ -71,7 +71,7 @@ const configs: Record<Environment, EnvironmentConfig> = {
   },
   production: {
     env: 'production',
-    apiUrl: 'https://api.medreachplus.com',
+    apiUrl: 'https://medq-be-production.up.railway.app',
     enableDebug: false,
     enableApiLogging: false,
     requestTimeoutMs: 10_000,
