@@ -188,6 +188,15 @@ axiosInstance.interceptors.response.use(
             });
         }
 
+        // Surface the backend's human-readable message instead of axios's
+        // generic "Request failed with status code NNN" — every screen that
+        // does `err instanceof Error ? err.message : …` benefits.
+        const backendMessage =
+            error.response?.data?.error?.message || error.response?.data?.message;
+        if (typeof backendMessage === 'string' && backendMessage.length > 0) {
+            error.message = backendMessage;
+        }
+
         throw error;
     },
 );
