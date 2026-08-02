@@ -107,6 +107,9 @@ export const palette = {
   tokenGreen: status.success,
   gradientStart: brand.primaryLight,
   gradientEnd: surface.white,
+  // WhatsApp brand greens (deep-link action buttons)
+  whatsappGreen: '#25D366',
+  whatsappGreenDark: '#128C7E',
   // Aliases for backward compatibility
   cardBg: surface.card,
   background: surface.background,

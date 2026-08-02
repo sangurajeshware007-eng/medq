@@ -100,3 +100,9 @@ export type {
   HospitalStats,
   PlatformStats,
 } from './dashboardService';
+
+export { default as doctorQueueService } from './doctorQueueService';
+export type { DoctorQueueState, QueueEntry, QueueSessionStatus } from './doctorQueueService';
+
+export { default as doctorPatientService } from './doctorPatientService';
+export type { DoctorPatientSummary, PatientVisit, Paged } from './doctorPatientService';

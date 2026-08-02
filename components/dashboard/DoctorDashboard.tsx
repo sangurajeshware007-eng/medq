@@ -15,9 +15,9 @@ import {
   TrendingUp,
   IndianRupee,
   Calendar,
-  CalendarOff,
   CheckCircle2,
   ChevronRight,
+  ListOrdered,
   XCircle,
   Clock,
   Phone,
@@ -31,6 +31,7 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  Switch,
   TouchableOpacity,
   ActivityIndicator,
   Linking,
@@ -41,14 +42,24 @@ import {
   useDoctorDashboard,
   useDoctorAppointments,
   useMarkAppointmentStatus,
+  useToggleAcceptingBookings,
 } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
 import Card from '../Card';
+import { statusBg, statusColor, statusLabel, sanitizePhone } from '../doctor/appointmentStatus';
+
+import QuickActionsRow from './QuickActionsRow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-/** YYYY-MM-DD string for a Date object */
-const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
+/** YYYY-MM-DD string for a Date object in LOCAL time.
+ *  (toISOString is UTC — between 00:00 and 05:30 IST it returns yesterday.) */
+const toDateStr = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 
 /** Build array of Date objects: 3 days back … today … 10 days forward */
 function buildDateRange(): Date[] {
@@ -87,53 +98,6 @@ function formatHeaderDate(dateStr: string): string {
   return `${d.getDate()} ${MON_NAMES[d.getMonth()]}`;
 }
 
-// ─── Status helpers ────────────────────────────────────────────────────────
-
-function statusColor(s: string) {
-  switch (s) {
-    case 'CONFIRMED':
-      return Colors.trustGreen;
-    case 'COMPLETED':
-      return Colors.primary;
-    case 'CANCELLED':
-      return Colors.error;
-    case 'NO_SHOW':
-      return Colors.gold;
-    default:
-      return Colors.textSecondary;
-  }
-}
-
-function statusBg(s: string) {
-  switch (s) {
-    case 'CONFIRMED':
-      return Colors.trustGreenLight;
-    case 'COMPLETED':
-      return Colors.primaryLight;
-    case 'CANCELLED':
-      return Colors.errorLight;
-    case 'NO_SHOW':
-      return Colors.goldLight;
-    default:
-      return Colors.borderLight;
-  }
-}
-
-function statusLabel(s: string) {
-  switch (s) {
-    case 'CONFIRMED':
-      return 'Confirmed';
-    case 'COMPLETED':
-      return 'Completed';
-    case 'CANCELLED':
-      return 'Cancelled';
-    case 'NO_SHOW':
-      return 'No Show';
-    default:
-      return s;
-  }
-}
-
 // ─── Component ────────────────────────────────────────────────────────────
 
 export default function DoctorDashboard() {
@@ -150,9 +114,31 @@ export default function DoctorDashboard() {
 
   const stripRef = useRef<ScrollView>(null);
   const markStatusMutation = useMarkAppointmentStatus();
+  const toggleAcceptingMutation = useToggleAcceptingBookings();
 
-  // Strip non-digits but keep a leading + (Linking accepts either)
-  const sanitizePhone = (raw: string) => raw.replace(/[^\d+]/g, '');
+  const handleToggleAccepting = (next: boolean) => {
+    const mutate = () =>
+      toggleAcceptingMutation.mutate(next, {
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : 'Could not update booking status.';
+          Alert.alert('Could not update', msg);
+        },
+      });
+    if (next) {
+      mutate(); // resuming needs no confirmation
+      return;
+    }
+    Alert.alert(
+      'Pause new bookings?',
+      "Patients won't be able to book new appointments until you turn this back on. " +
+        'Existing bookings are not affected and your profile stays visible.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Pause', style: 'destructive', onPress: mutate },
+      ],
+    );
+  };
+
   const callPatient = (raw: string | null) => {
     const num = raw ? sanitizePhone(raw) : '';
     if (num) Linking.openURL(`tel:${num}`).catch(() => {});
@@ -302,20 +288,44 @@ export default function DoctorDashboard() {
             )}
           </View>
         )}
+
+        {/* ── Accepting-bookings toggle ── */}
+        {isApproved && (
+          <View style={styles.acceptingRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.acceptingLabel}>Accepting new bookings</Text>
+              <Text style={styles.acceptingHint}>
+                Off pauses new bookings — your profile stays visible to patients.
+              </Text>
+            </View>
+            <Switch
+              value={dashboard.acceptingBookings}
+              onValueChange={handleToggleAccepting}
+              disabled={toggleAcceptingMutation.isPending}
+              trackColor={{ false: Colors.borderLight, true: Colors.trustGreenLight }}
+              thumbColor={dashboard.acceptingBookings ? Colors.trustGreen : Colors.textLight}
+            />
+          </View>
+        )}
       </Card>
 
-      {/* ── Manage Time Off ── */}
-      <TouchableOpacity
-        style={styles.timeOffCta}
-        onPress={() => router.push('/doctor/time-off')}
-        activeOpacity={0.75}
-      >
-        <View style={styles.timeOffCtaLeft}>
-          <CalendarOff size={14} color={Colors.primary} strokeWidth={2.5} />
-          <Text style={styles.timeOffCtaText}>Manage Time Off</Text>
-        </View>
-        <ChevronRight size={14} color={Colors.primary} strokeWidth={2.5} />
-      </TouchableOpacity>
+      {/* ── Quick actions ── */}
+      <QuickActionsRow />
+
+      {/* ── Live queue banner (today only) ── */}
+      {isApproved && selectedDate === todayStr && (
+        <TouchableOpacity
+          style={styles.queueBanner}
+          onPress={() => router.push('/doctor/queue')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.queueBannerLeft}>
+            <ListOrdered size={16} color={Colors.cardBg} strokeWidth={2.4} />
+            <Text style={styles.queueBannerText}>Open Live Queue</Text>
+          </View>
+          <ChevronRight size={16} color={Colors.cardBg} strokeWidth={2.4} />
+        </TouchableOpacity>
+      )}
 
       {/* ── 14-day date strip ── */}
       <ScrollView
@@ -492,7 +502,7 @@ export default function DoctorDashboard() {
                       onPress={() => whatsappPatient(appt.patientPhone)}
                       hitSlop={6}
                     >
-                      <MessageCircle size={13} color="#128C7E" strokeWidth={2.4} />
+                      <MessageCircle size={13} color={Colors.whatsappGreenDark} strokeWidth={2.4} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -662,22 +672,32 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   roomText: { fontSize: 11, color: Colors.textLight },
+  acceptingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  acceptingLabel: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  acceptingHint: { fontSize: 11, color: Colors.textLight, marginTop: 2 },
 
   // ── Date strip ──
-  timeOffCta: {
+  queueBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.primaryLight,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
+    backgroundColor: Colors.primary,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 12,
     marginBottom: 12,
   },
-  timeOffCtaLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  timeOffCtaText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  queueBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  queueBannerText: { fontSize: 13, fontWeight: '700', color: Colors.cardBg },
   strip: { marginBottom: 14 },
   stripContent: { paddingHorizontal: 4, gap: 8 },
   dateCell: {
@@ -794,7 +814,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionBtnCall: { backgroundColor: Colors.trustGreenLight, borderColor: Colors.trustGreen + '40' },
-  actionBtnWhatsapp: { backgroundColor: '#25D36622', borderColor: '#25D36655' },
+  actionBtnWhatsapp: {
+    backgroundColor: Colors.whatsappGreen + '22',
+    borderColor: Colors.whatsappGreen + '55',
+  },
 
   // Mark complete / no-show row
   markRow: {

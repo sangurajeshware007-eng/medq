@@ -352,6 +352,17 @@ export default function ProfileScreen() {
                   <>
                     <TouchableOpacity
                       style={styles.addHospitalBtn}
+                      onPress={() => router.push('/doctor/patients')}
+                      activeOpacity={0.75}
+                    >
+                      <View style={styles.addHospitalLeft}>
+                        <Users size={16} color={Colors.primary} strokeWidth={2.5} />
+                        <Text style={styles.addHospitalText}>My Patients</Text>
+                      </View>
+                      <ChevronRight size={18} color={Colors.primary} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.addHospitalBtn, { marginTop: 8 }]}
                       onPress={() => router.push('/doctor/add-hospital')}
                       activeOpacity={0.75}
                     >

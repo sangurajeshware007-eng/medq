@@ -75,6 +75,8 @@ export interface DoctorDashboard {
   specialization: string;
   approvalStatus: string;
   isActive: boolean;
+  /** Doctor-controlled pause for NEW online bookings (independent of isActive). */
+  acceptingBookings: boolean;
   profileStrength: number;
   primaryHospital: DoctorHospitalSummary | null;
   today: TodayStats;

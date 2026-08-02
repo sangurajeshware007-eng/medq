@@ -2,7 +2,13 @@
  * React Query hooks for all API endpoints.
  * Provides loading states, error handling, and caching out of the box.
  */
-import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
 
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -52,6 +58,10 @@ import type {
   AdminDoctorSummary,
   AdminHospitalSummary,
 } from '../services/dashboardService';
+import doctorPatientService from '../services/doctorPatientService';
+import type { DoctorPatientSummary, PatientVisit, Paged } from '../services/doctorPatientService';
+import doctorQueueService from '../services/doctorQueueService';
+import type { DoctorQueueState } from '../services/doctorQueueService';
 import onboardingService from '../services/onboardingService';
 import type {
   DoctorOnboardingStatusSummary,
@@ -89,6 +99,10 @@ export const queryKeys = {
   doctorOnboardingStatus: ['doctor', 'onboarding-status'] as const,
   hospitalOnboardingStatus: ['hospital', 'onboarding-status'] as const,
   doctorDashboard: ['doctor', 'dashboard'] as const,
+  doctorQueue: ['doctor', 'queue'] as const,
+  doctorPatients: (page: number, search: string) => ['doctor', 'patients', page, search] as const,
+  doctorPatientHistory: (patientUserId: string, page: number) =>
+    ['doctor', 'patients', patientUserId, 'history', page] as const,
   hospitalManagerDashboard: ['hospital-manager', 'dashboard'] as const,
   adminDashboard: ['admin', 'dashboard'] as const,
   adminPending: ['admin', 'pending'] as const,
@@ -534,6 +548,112 @@ export function useMarkAppointmentStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.doctorDashboard });
       queryClient.invalidateQueries({ queryKey: ['doctorAppointments'] });
+    },
+  });
+}
+
+// ─── Doctor Live Queue Hooks ─────────────────────────────────────────────
+
+export type QueueAction =
+  | { action: 'start' }
+  | { action: 'end' }
+  | { action: 'next' }
+  | { action: 'skip' }
+  | { action: 'recall'; bookingId: string };
+
+/** Doctor's own live queue — polls every 10s so reception check-ins show up. */
+export function useDoctorQueue(
+  options?: Omit<UseQueryOptions<DoctorQueueState, ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<DoctorQueueState, ApiError>({
+    queryKey: queryKeys.doctorQueue,
+    queryFn: () => doctorQueueService.getQueue(),
+    refetchInterval: 10_000,
+    staleTime: 5_000,
+    ...options,
+  });
+}
+
+/**
+ * One mutation hook for every queue action. The backend returns the full new
+ * queue state, so we write it straight into the cache (setQueryData) instead
+ * of optimistic guessing — the queue is contended state (reception check-ins
+ * land concurrently) and the next token isn't client-predictable.
+ */
+export function useQueueAction() {
+  const queryClient = useQueryClient();
+  return useMutation<DoctorQueueState, ApiError, QueueAction>({
+    mutationFn: (input) => {
+      switch (input.action) {
+        case 'start':
+          return doctorQueueService.start();
+        case 'end':
+          return doctorQueueService.end();
+        case 'next':
+          return doctorQueueService.next();
+        case 'skip':
+          return doctorQueueService.skip();
+        case 'recall':
+          return doctorQueueService.recall(input.bookingId);
+      }
+    },
+    onSuccess: (state) => {
+      queryClient.setQueryData(queryKeys.doctorQueue, state);
+      // Call Next auto-completes bookings → revenue and appointment lists move.
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctorDashboard });
+      queryClient.invalidateQueries({ queryKey: ['doctorAppointments'] });
+    },
+  });
+}
+
+// ─── Doctor "My Patients" Hooks ──────────────────────────────────────────
+
+export function useDoctorPatients(page: number, search: string) {
+  return useQuery<Paged<DoctorPatientSummary>, ApiError>({
+    queryKey: queryKeys.doctorPatients(page, search),
+    queryFn: () => doctorPatientService.list({ page, size: 20, search: search || undefined }),
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useDoctorPatientHistory(patientUserId: string, page = 0) {
+  return useQuery<Paged<PatientVisit>, ApiError>({
+    queryKey: queryKeys.doctorPatientHistory(patientUserId, page),
+    queryFn: () => doctorPatientService.history(patientUserId, { page, size: 20 }),
+    enabled: !!patientUserId,
+    staleTime: 60 * 1000,
+  });
+}
+
+// ─── Accepting-Bookings Toggle ───────────────────────────────────────────
+
+/**
+ * Optimistic boolean flip with rollback — unlike queue mutations this is
+ * trivially predictable, so the switch should move instantly.
+ */
+export function useToggleAcceptingBookings() {
+  const queryClient = useQueryClient();
+  return useMutation<{ accepting: boolean }, ApiError, boolean, { prev?: DoctorDashboard }>({
+    mutationFn: (accepting) => doctorService.updateAcceptingBookings(accepting),
+    onMutate: async (accepting) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.doctorDashboard });
+      const prev = queryClient.getQueryData<DoctorDashboard>(queryKeys.doctorDashboard);
+      if (prev) {
+        queryClient.setQueryData<DoctorDashboard>(queryKeys.doctorDashboard, {
+          ...prev,
+          acceptingBookings: accepting,
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _accepting, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(queryKeys.doctorDashboard, context.prev);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.doctorDashboard });
     },
   });
 }
