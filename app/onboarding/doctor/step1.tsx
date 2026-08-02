@@ -155,7 +155,7 @@ export default function DoctorStep1() {
       });
       const msg =
         err instanceof FileTooLargeError
-          ? t('certificateTooLarge') || 'Certificate must be less than 1 MB.'
+          ? t('certificateTooLarge') || 'Certificate must be less than 5 MB.'
           : t('certificateUploadFailed') || 'Could not upload the certificate. Please try again.';
       Alert.alert(t('uploadCertificate') || 'Upload certificate', msg);
     }
@@ -217,8 +217,11 @@ export default function DoctorStep1() {
     if (!validate()) return;
     setLoading(true);
     try {
+      // Custom-typed specializations aren't in the backend enum — they map to
+      // OTHER (the UI keeps showing the typed text via getSpecializationLabel).
+      const knownSpecialization = SPECIALIZATIONS.some((sp) => sp.value === profile.specialization);
       await onboardingService.saveDoctorProfile({
-        specialization: profile.specialization,
+        specialization: knownSpecialization ? profile.specialization : 'OTHER',
         gender: profile.gender,
         dateOfBirth: profile.dateOfBirth || undefined,
         consultationFee: Number(profile.consultationFee),
@@ -579,7 +582,7 @@ export default function DoctorStep1() {
           error={errors.registrationNumber}
         />
 
-        {/* Medical Registration Certificate (JPEG/PNG, <1MB) */}
+        {/* Medical Registration Certificate (JPEG/PNG, <5MB) */}
         <View style={styles.fieldBlock}>
           <Text style={styles.fieldLabel}>
             {t('medicalRegistrationCertificate') || 'Medical Registration Certificate'} *
@@ -594,7 +597,7 @@ export default function DoctorStep1() {
             onRemove={handleRemoveCertificate}
           />
           <Text style={styles.fieldHint}>
-            {t('certificateFormatHint') || 'JPEG or PNG, less than 1 MB.'}
+            {t('certificateFormatHint') || 'JPEG or PNG, less than 5 MB.'}
           </Text>
           {errors.registrationCertificate ? (
             <Text style={styles.fieldError}>{errors.registrationCertificate}</Text>

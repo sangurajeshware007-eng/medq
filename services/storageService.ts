@@ -28,14 +28,24 @@ export type StorageFileType =
   | 'HOSPITAL_DOCUMENT'
   | 'CITY_IMAGE';
 
-/** Global upload cap. Must match `MAX_UPLOAD_BYTES` in medq-be/.../storage/UploadPolicy.kt. */
-export const MAX_UPLOAD_BYTES = 1 * 1024 * 1024; // 1 MB
+/** Upload caps. Must match `maxUploadBytes()` in medq-be/.../storage/UploadPolicy.kt:
+ *  certificates/license scans get 5 MB, photos/avatars stay at 1 MB. */
+export const MAX_UPLOAD_BYTES = 1 * 1024 * 1024; // 1 MB (images)
+export const MAX_CERTIFICATE_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB (certificates)
+
+const maxBytesFor = (fileType: StorageFileType): number =>
+  fileType === 'DOCTOR_CERTIFICATE' || fileType === 'HOSPITAL_DOCUMENT'
+    ? MAX_CERTIFICATE_UPLOAD_BYTES
+    : MAX_UPLOAD_BYTES;
 
 /** Thrown when a file is too big — surface its `code` to render the localised toast. */
 export class FileTooLargeError extends Error {
   readonly code = 'FILE_TOO_LARGE';
-  constructor(public actualBytes: number) {
-    super(`File must be less than ${MAX_UPLOAD_BYTES} bytes (got ${actualBytes})`);
+  constructor(
+    public actualBytes: number,
+    public maxBytes: number = MAX_UPLOAD_BYTES,
+  ) {
+    super(`File must be less than ${maxBytes} bytes (got ${actualBytes})`);
   }
 }
 
@@ -180,8 +190,8 @@ async function uploadFile(
   } catch (e) {
     throw new Error(`Could not read the selected file. ${(e as Error).message}`);
   }
-  if (blob.size > MAX_UPLOAD_BYTES) {
-    throw new FileTooLargeError(blob.size);
+  if (blob.size > maxBytesFor(fileType)) {
+    throw new FileTooLargeError(blob.size, maxBytesFor(fileType));
   }
 
   const presign = await requestPresignedUrl(fileType, safeContentType, blob.size, fileName);

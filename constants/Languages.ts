@@ -250,8 +250,8 @@ export const translations: Translations = {
     medicalRegistrationCertificate: 'Medical Registration Certificate',
     uploadCertificate: 'Upload certificate',
     certificateRequired: 'Please upload your registration certificate.',
-    certificateFormatHint: 'JPEG or PNG, less than 1 MB.',
-    certificateTooLarge: 'Certificate must be less than 1 MB. Pick a smaller image.',
+    certificateFormatHint: 'JPEG or PNG, less than 5 MB.',
+    certificateTooLarge: 'Certificate must be less than 5 MB. Pick a smaller image.',
     certificateUploadFailed: 'Could not upload the certificate. Please try again.',
   },
   hi: {
@@ -467,8 +467,8 @@ export const translations: Translations = {
     medicalRegistrationCertificate: 'मेडिकल रजिस्ट्रेशन प्रमाणपत्र',
     uploadCertificate: 'प्रमाणपत्र अपलोड करें',
     certificateRequired: 'कृपया अपना रजिस्ट्रेशन प्रमाणपत्र अपलोड करें।',
-    certificateFormatHint: 'JPEG या PNG, 1 MB से कम।',
-    certificateTooLarge: 'प्रमाणपत्र 1 MB से कम होना चाहिए। छोटी छवि चुनें।',
+    certificateFormatHint: 'JPEG या PNG, 5 MB से कम।',
+    certificateTooLarge: 'प्रमाणपत्र 5 MB से कम होना चाहिए। छोटी छवि चुनें।',
     certificateUploadFailed: 'प्रमाणपत्र अपलोड नहीं हो सका। कृपया पुनः प्रयास करें।',
   },
   kn: {
@@ -684,8 +684,8 @@ export const translations: Translations = {
     medicalRegistrationCertificate: 'ವೈದ್ಯಕೀಯ ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರ',
     uploadCertificate: 'ಪ್ರಮಾಣಪತ್ರ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ',
     certificateRequired: 'ದಯವಿಟ್ಟು ನಿಮ್ಮ ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.',
-    certificateFormatHint: 'JPEG ಅಥವಾ PNG, 1 MB ಗಿಂತ ಕಡಿಮೆ.',
-    certificateTooLarge: 'ಪ್ರಮಾಣಪತ್ರ 1 MB ಗಿಂತ ಕಡಿಮೆಯಿರಬೇಕು. ಸಣ್ಣ ಚಿತ್ರ ಆಯ್ಕೆ ಮಾಡಿ.',
+    certificateFormatHint: 'JPEG ಅಥವಾ PNG, 5 MB ಗಿಂತ ಕಡಿಮೆ.',
+    certificateTooLarge: 'ಪ್ರಮಾಣಪತ್ರ 5 MB ಗಿಂತ ಕಡಿಮೆಯಿರಬೇಕು. ಸಣ್ಣ ಚಿತ್ರ ಆಯ್ಕೆ ಮಾಡಿ.',
     certificateUploadFailed: 'ಪ್ರಮಾಣಪತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
   },
 };
