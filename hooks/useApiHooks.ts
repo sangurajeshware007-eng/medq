@@ -559,7 +559,8 @@ export type QueueAction =
   | { action: 'end' }
   | { action: 'next' }
   | { action: 'skip' }
-  | { action: 'recall'; bookingId: string };
+  | { action: 'recall'; bookingId: string }
+  | { action: 'checkIn'; bookingId: string };
 
 /** Doctor's own live queue — polls every 10s so reception check-ins show up. */
 export function useDoctorQueue(
@@ -595,6 +596,8 @@ export function useQueueAction() {
           return doctorQueueService.skip();
         case 'recall':
           return doctorQueueService.recall(input.bookingId);
+        case 'checkIn':
+          return doctorQueueService.checkIn(input.bookingId);
       }
     },
     onSuccess: (state) => {

@@ -13,9 +13,16 @@ import { statusBg, statusColor, statusLabel, sanitizePhone } from './appointment
 
 interface QueuePatientRowProps {
   entry: QueueEntry;
+  /** Doctor-side check-in (receptionist-on-leave fallback). Shown on not-arrived CONFIRMED rows. */
+  onCheckIn?: (bookingId: string) => void;
+  checkInDisabled?: boolean;
 }
 
-export default function QueuePatientRow({ entry }: QueuePatientRowProps) {
+export default function QueuePatientRow({
+  entry,
+  onCheckIn,
+  checkInDisabled,
+}: QueuePatientRowProps) {
   const call = () => {
     const num = entry.patientPhone ? sanitizePhone(entry.patientPhone) : '';
     if (num) Linking.openURL(`tel:${num}`).catch(() => {});
@@ -56,6 +63,17 @@ export default function QueuePatientRow({ entry }: QueuePatientRowProps) {
             {statusLabel(entry.status)}
           </Text>
         </View>
+      )}
+
+      {onCheckIn && entry.status === 'CONFIRMED' && !entry.checkedIn && (
+        <TouchableOpacity
+          onPress={() => onCheckIn(entry.bookingId)}
+          disabled={checkInDisabled}
+          style={[styles.checkInBtn, checkInDisabled && styles.checkInBtnDisabled]}
+          hitSlop={6}
+        >
+          <Text style={styles.checkInBtnText}>Check In</Text>
+        </TouchableOpacity>
       )}
 
       {entry.patientPhone && (
@@ -104,6 +122,14 @@ const styles = StyleSheet.create({
   meta: { fontSize: 11, color: Colors.textLight, marginTop: 1 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   badgeText: { fontSize: 10, fontWeight: '700' },
+  checkInBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: Colors.trustGreen,
+  },
+  checkInBtnDisabled: { opacity: 0.5 },
+  checkInBtnText: { fontSize: 11, fontWeight: '700', color: Colors.cardBg },
   actions: { flexDirection: 'row', gap: 6 },
   actionBtn: {
     width: 26,

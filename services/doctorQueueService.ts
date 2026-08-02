@@ -67,6 +67,11 @@ export const doctorQueueService = {
   /** POST /api/v1/doctor/queue/recall/{bookingId} — recall a passed-over patient */
   recall: (bookingId: string): Promise<DoctorQueueState> =>
     api.post<DoctorQueueState>(`${BASE}/recall/${bookingId}`),
+
+  /** POST /api/v1/doctor/queue/check-in/{bookingId} — doctor marks own patient arrived
+   *  (fallback when no receptionist is on duty; works before the session starts). */
+  checkIn: (bookingId: string): Promise<DoctorQueueState> =>
+    api.post<DoctorQueueState>(`${BASE}/check-in/${bookingId}`),
 };
 
 export default doctorQueueService;

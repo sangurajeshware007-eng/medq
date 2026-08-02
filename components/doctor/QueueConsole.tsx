@@ -246,7 +246,14 @@ export default function QueueConsole() {
       ) : (
         <View style={styles.list}>
           {queue.entries.map((entry) => (
-            <QueuePatientRow key={entry.bookingId} entry={entry} />
+            <QueuePatientRow
+              key={entry.bookingId}
+              entry={entry}
+              onCheckIn={(bookingId) =>
+                runAction({ action: 'checkIn', bookingId }, 'Could not check in')
+              }
+              checkInDisabled={isPending}
+            />
           ))}
         </View>
       )}
