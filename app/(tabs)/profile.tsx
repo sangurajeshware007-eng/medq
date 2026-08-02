@@ -70,17 +70,20 @@ export default function ProfileScreen() {
   const isDoctor = user?.role === 'DOCTOR';
   const isHospitalManager = user?.role === 'HOSPITAL_MANAGER';
   const isReceptionist = user?.role === 'HOSPITAL_RECEPTIONIST';
-  const isPatient = !user?.role || user.role === 'PATIENT';
+  // Anyone who isn't already a doctor can have an in-flight doctor application —
+  // a hospital manager/receptionist may also be applying as a doctor, and hiding
+  // the section made their DRAFT application invisible and unfinishable.
+  const showProviderSection = isLoggedIn && !isDoctor;
   const { data: doctorData, isLoading: doctorLoading } = useDoctorDashboard({ enabled: isDoctor });
   const { data: hospitalData, isLoading: hospitalLoading } = useHospitalManagerDashboard({
     enabled: isHospitalManager,
   });
-  // For patients: check if they've started any onboarding (drives smart CTA)
+  // Check if they've started any onboarding (drives the state-aware CTA)
   const { data: doctorOnboardingStatus } = useDoctorOnboardingStatus({
-    enabled: isPatient && isLoggedIn,
+    enabled: showProviderSection,
   });
   const { data: hospitalOnboardingStatus } = useHospitalOnboardingStatus({
-    enabled: isPatient && isLoggedIn,
+    enabled: showProviderSection,
   });
   const deactivate = useDeactivateProfile();
 
@@ -557,8 +560,11 @@ export default function ProfileScreen() {
           </Card>
         </TouchableOpacity>
 
-        {/* Provider section — only for PATIENT role; state-aware per entity */}
-        {isPatient && (
+        {/* Provider section — any non-doctor role; state-aware per entity.
+            Hospital managers/receptionists keep access to their in-flight
+            doctor application here (their hospital blocks simply don't render
+            once the hospital is APPROVED). */}
+        {showProviderSection && (
           <Card style={styles.providerCard}>
             <View style={styles.providerHeader}>
               <UserPlus size={22} color={Colors.primary} strokeWidth={2} />
