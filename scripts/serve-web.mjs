@@ -77,6 +77,8 @@ const server = createServer((req, res) => {
   createReadStream(hit.file).pipe(res);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[serve-web] listening on :${PORT}, root=${ROOT}`);
+// '::' = dual-stack — Railway's healthcheck/private network is IPv6-only,
+// so binding 0.0.0.0 makes the app unreachable ("service unavailable").
+server.listen(PORT, '::', () => {
+  console.log(`[serve-web] listening on [::]:${PORT}, root=${ROOT}`);
 });
