@@ -251,7 +251,15 @@ export default function OtpScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   keyboardView: { flex: 1 },
-  scrollContent: { flexGrow: 1, padding: 24, paddingTop: 16 },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 24,
+    paddingTop: 16,
+    // Readable form column on wide screens (web) — no effect on phones.
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+  },
 
   backBtn: { marginBottom: 32 },
   backText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
@@ -275,12 +283,13 @@ const styles = StyleSheet.create({
 
   otpRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: 16,
     gap: 8,
   },
   otpBox: {
-    flex: 1,
+    // Fixed-size cells — flex:1 ballooned each box across wide (web) viewports.
+    width: 48,
     height: 56,
     borderRadius: 12,
     borderWidth: 2,
