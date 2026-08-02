@@ -44,6 +44,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useDoctor, useReviews, useSubmitReview } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 // Sub-components
 
 export default function DoctorProfileScreen() {
@@ -508,9 +510,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.text,
   },
-  scrollContent: {
-    paddingBottom: 24,
-  },
+  scrollContent: { ...contentColumn, paddingBottom: 24 },
   sectionMargin: {
     marginHorizontal: 16,
     marginTop: 16,

@@ -59,6 +59,8 @@ import storageService from '../../services/storageService';
 import type { DayAvailability, SessionEntry } from '../../store/doctorOnboardingStore';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 // ─── Constants ────────────────────────────────────────────────────────────
 
 const TABS = ['Profile', 'Availability', 'Details'] as const;
@@ -970,6 +972,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: Colors.error, textAlign: 'center' },
 
   header: {
+    ...contentColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1006,7 +1009,7 @@ const styles = StyleSheet.create({
   tabLabelActive: { color: Colors.primary },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 20 },
+  scrollContent: { ...contentColumn, padding: 20 },
 
   sectionLabel: {
     fontSize: 13,

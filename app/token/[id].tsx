@@ -13,6 +13,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useDoctor, useLiveQueue, useMyToken } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 /**
  * Live token tracker — REAL queue data.
  *
@@ -200,10 +202,7 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 32,
   },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
+  content: { ...contentColumn, flex: 1, padding: 16 },
   demoPill: {
     flexDirection: 'row',
     alignItems: 'center',

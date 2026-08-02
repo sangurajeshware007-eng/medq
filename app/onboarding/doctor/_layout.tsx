@@ -5,9 +5,10 @@
  * If the user already completed some steps, the store is hydrated and
  * the router jumps to the correct resume step.
  */
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+
 import { Colors } from '../../../constants/Colors';
 import { useDoctorOnboardingHydration } from '../../../hooks/useOnboardingHydration';
 

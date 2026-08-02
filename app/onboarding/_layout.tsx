@@ -1,8 +1,8 @@
 /**
  * Onboarding group layout — wraps doctor + hospital sub-navigators
  */
-import React from 'react';
 import { Stack } from 'expo-router';
+import React from 'react';
 
 export default function OnboardingLayout() {
   return (
@@ -13,4 +13,3 @@ export default function OnboardingLayout() {
     </Stack>
   );
 }
-

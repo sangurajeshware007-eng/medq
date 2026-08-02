@@ -24,6 +24,8 @@ import { doctorService } from '../../services/doctorService';
 import type { HospitalListItem } from '../../services/hospitalService';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { formColumn } from '@/theme';
+
 export default function AddHospitalScreen() {
   const router = useRouter();
 
@@ -37,12 +39,14 @@ export default function AddHospitalScreen() {
 
   const { data: hospitals = [], isLoading: hospitalsLoading } = useHospitals();
 
-  const filtered = search.trim().length > 0
-    ? hospitals.filter((h) =>
-        h.name.toLowerCase().includes(search.toLowerCase()) ||
-        h.address.toLowerCase().includes(search.toLowerCase()),
-      )
-    : hospitals;
+  const filtered =
+    search.trim().length > 0
+      ? hospitals.filter(
+          (h) =>
+            h.name.toLowerCase().includes(search.toLowerCase()) ||
+            h.address.toLowerCase().includes(search.toLowerCase()),
+        )
+      : hospitals;
 
   const handleSelect = (hospital: HospitalListItem) => {
     setSelectedHospital(hospital);
@@ -154,7 +158,11 @@ export default function AddHospitalScreen() {
       </ScrollView>
 
       {/* Hospital picker modal */}
-      <Modal visible={pickerVisible} animationType="slide" onRequestClose={() => setPickerVisible(false)}>
+      <Modal
+        visible={pickerVisible}
+        animationType="slide"
+        onRequestClose={() => setPickerVisible(false)}
+      >
         <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Hospital</Text>
@@ -190,9 +198,7 @@ export default function AddHospitalScreen() {
                 >
                   <Building2
                     size={18}
-                    color={
-                      selectedHospital?.id === item.id ? Colors.primary : Colors.textSecondary
-                    }
+                    color={selectedHospital?.id === item.id ? Colors.primary : Colors.textSecondary}
                     strokeWidth={2}
                     style={{ marginRight: 10 }}
                   />
@@ -207,9 +213,7 @@ export default function AddHospitalScreen() {
                   )}
                 </TouchableOpacity>
               )}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>No hospitals found.</Text>
-              }
+              ListEmptyComponent={<Text style={styles.emptyText}>No hospitals found.</Text>}
             />
           )}
         </SafeAreaView>
@@ -224,6 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
+    ...formColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -232,7 +237,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    ...crossPlatformShadow({ color: Colors.shadow, offsetY: 2, opacity: 1, radius: 8, elevation: 3 }),
+    ...crossPlatformShadow({
+      color: Colors.shadow,
+      offsetY: 2,
+      opacity: 1,
+      radius: 8,
+      elevation: 3,
+    }),
   },
   backBtn: {
     width: 36,
@@ -248,9 +259,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 16,
-  },
+  contentContainer: { ...formColumn, padding: 16 },
   label: {
     fontSize: 14,
     fontWeight: '600',

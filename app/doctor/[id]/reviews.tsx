@@ -19,6 +19,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDoctorReviewsPaged } from '../../../hooks/useApiHooks';
 
+import { contentColumn } from '@/theme';
+
 const PAGE_SIZE = 10;
 
 export default function DoctorReviewsScreen() {
@@ -115,7 +117,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
-  scrollContent: { padding: spacing.base, paddingBottom: spacing.xl3 },
+  scrollContent: { ...contentColumn, padding: spacing.base, paddingBottom: spacing.xl3 },
   empty: { textAlign: 'center', color: Colors.textSecondary, marginTop: 40 },
   card: {
     backgroundColor: '#FFFFFF',

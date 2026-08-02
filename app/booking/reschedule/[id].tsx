@@ -1,17 +1,33 @@
-import React, { useState } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  ChevronLeft, Calendar, Clock, Hospital, Stethoscope,
-  CheckCircle, CalendarClock, PartyPopper, ArrowRight,
+  ChevronLeft,
+  Calendar,
+  Clock,
+  Hospital,
+  Stethoscope,
+  CheckCircle,
+  CalendarClock,
+  PartyPopper,
+  ArrowRight,
 } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { Colors } from '../../../constants/Colors';
 import { useBookingDetail, useRescheduleBooking, useDoctorSlots } from '../../../hooks/useApiHooks';
-import { crossPlatformShadow } from '../../../utils/shadow';
 import type { TimeSlot, Session } from '../../../services/doctorService';
+import { crossPlatformShadow } from '../../../utils/shadow';
+
+import { contentColumn } from '@/theme';
 
 // ─── Constants ───────────────────────────────────────────────────────────
 
@@ -19,7 +35,8 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function getUpcomingDates(count: number) {
   const dates = [];
-  for (let i = 1; i <= count; i++) {   // start from tomorrow (can't same-day reschedule)
+  for (let i = 1; i <= count; i++) {
+    // start from tomorrow (can't same-day reschedule)
     const d = new Date();
     d.setDate(d.getDate() + i);
     dates.push({
@@ -38,10 +55,21 @@ const DATES = getUpcomingDates(14);
 // ─── Sub-components ──────────────────────────────────────────────────────
 
 function CurrentBookingCard({
-  doctorName, specialization, hospitalName, bookingDate, slotStart, slotEnd, tokenNumber,
+  doctorName,
+  specialization,
+  hospitalName,
+  bookingDate,
+  slotStart,
+  slotEnd,
+  tokenNumber,
 }: {
-  doctorName: string; specialization: string; hospitalName: string;
-  bookingDate: string; slotStart: string; slotEnd: string; tokenNumber: number;
+  doctorName: string;
+  specialization: string;
+  hospitalName: string;
+  bookingDate: string;
+  slotStart: string;
+  slotEnd: string;
+  tokenNumber: number;
 }) {
   return (
     <View style={styles.currentCard}>
@@ -59,7 +87,9 @@ function CurrentBookingCard({
         <Calendar size={13} color={Colors.textSecondary} strokeWidth={2} />
         <Text style={styles.currentCardSub}>{bookingDate}</Text>
         <Clock size={13} color={Colors.textSecondary} strokeWidth={2} style={{ marginLeft: 10 }} />
-        <Text style={styles.currentCardSub}>{slotStart} – {slotEnd}</Text>
+        <Text style={styles.currentCardSub}>
+          {slotStart} – {slotEnd}
+        </Text>
         <Text style={styles.tokenBadge}>Token #{tokenNumber}</Text>
       </View>
     </View>
@@ -98,7 +128,10 @@ export default function RescheduleScreen() {
   function handleConfirm() {
     if (!selectedSlot || !selectedDateObj || !booking) return;
     rescheduleMutation.mutate(
-      { id: booking.id, data: { newDate: selectedDateObj.fullDate, newSlotStart: selectedSlot.time } },
+      {
+        id: booking.id,
+        data: { newDate: selectedDateObj.fullDate, newSlotStart: selectedSlot.time },
+      },
       {
         onSuccess: (result) => {
           setNewBookingRef(result.bookingRef);
@@ -202,7 +235,9 @@ export default function RescheduleScreen() {
               <View style={styles.changeSide}>
                 <Text style={styles.changeLabel}>Current</Text>
                 <Text style={styles.changeDate}>{booking.bookingDate}</Text>
-                <Text style={styles.changeSlot}>{booking.slotStart} – {booking.slotEnd}</Text>
+                <Text style={styles.changeSlot}>
+                  {booking.slotStart} – {booking.slotEnd}
+                </Text>
                 <Text style={styles.changeToken}>Token #{booking.tokenNumber}</Text>
               </View>
               <ArrowRight size={22} color={Colors.primary} strokeWidth={2.5} />
@@ -211,8 +246,12 @@ export default function RescheduleScreen() {
                 <Text style={[styles.changeDate, { color: Colors.primary }]}>
                   {selectedDateObj?.day}, {selectedDateObj?.date} {selectedDateObj?.month}
                 </Text>
-                <Text style={[styles.changeSlot, { color: Colors.primary }]}>{selectedSlot?.time}</Text>
-                <Text style={[styles.changeToken, { color: Colors.textSecondary }]}>New token assigned</Text>
+                <Text style={[styles.changeSlot, { color: Colors.primary }]}>
+                  {selectedSlot?.time}
+                </Text>
+                <Text style={[styles.changeToken, { color: Colors.textSecondary }]}>
+                  New token assigned
+                </Text>
               </View>
             </View>
           </View>
@@ -230,7 +269,8 @@ export default function RescheduleScreen() {
           <View style={styles.noticeCard}>
             <CheckCircle size={16} color={Colors.trustGreen} strokeWidth={2} />
             <Text style={styles.noticeText}>
-              Your current booking will be cancelled and a new one created with the same doctor and hospital.
+              Your current booking will be cancelled and a new one created with the same doctor and
+              hospital.
             </Text>
           </View>
 
@@ -262,7 +302,10 @@ export default function RescheduleScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+      >
         <View style={styles.sectionPad}>
           <CurrentBookingCard
             doctorName={booking.doctorName}
@@ -279,16 +322,27 @@ export default function RescheduleScreen() {
         <View style={styles.sectionPad}>
           <Text style={styles.sectionTitle}>Choose a New Date</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateRow}
+        >
           {DATES.map((d, idx) => {
             const active = idx === selectedDateIdx;
             return (
               <TouchableOpacity
                 key={d.fullDate}
-                onPress={() => { setSelectedDateIdx(idx); setSelectedSlotId(null); }}
+                onPress={() => {
+                  setSelectedDateIdx(idx);
+                  setSelectedSlotId(null);
+                }}
                 style={[styles.datePill, active && styles.datePillActive]}
               >
-                {d.label ? <Text style={[styles.dateLabel, active && styles.dateLabelActive]}>{d.label}</Text> : null}
+                {d.label ? (
+                  <Text style={[styles.dateLabel, active && styles.dateLabelActive]}>
+                    {d.label}
+                  </Text>
+                ) : null}
                 <Text style={[styles.dateDay, active && styles.dateDayActive]}>{d.day}</Text>
                 <Text style={[styles.dateNum, active && styles.dateNumActive]}>{d.date}</Text>
                 <Text style={[styles.dateMon, active && styles.dateMonActive]}>{d.month}</Text>
@@ -330,11 +384,13 @@ export default function RescheduleScreen() {
                         unavailable && styles.slotPillDisabled,
                       ]}
                     >
-                      <Text style={[
-                        styles.slotTime,
-                        active && styles.slotTimeActive,
-                        unavailable && styles.slotTimeDisabled,
-                      ]}>
+                      <Text
+                        style={[
+                          styles.slotTime,
+                          active && styles.slotTimeActive,
+                          unavailable && styles.slotTimeDisabled,
+                        ]}
+                      >
                         {slot.time.split('-')[0]}
                       </Text>
                       {!unavailable && slot.remaining <= 3 && (
@@ -377,35 +433,84 @@ const styles = StyleSheet.create({
   backLinkText: { color: Colors.primary, fontSize: 14, fontWeight: '600' },
 
   navBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   navTitle: { fontSize: 17, fontWeight: '700', color: Colors.text },
 
   sectionPad: { paddingHorizontal: 16, paddingTop: 20 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 4 },
 
   currentCard: {
-    backgroundColor: Colors.primaryLight, borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: Colors.primary + '30',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
   },
-  currentCardLabel: { fontSize: 11, fontWeight: '700', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  currentCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
   currentCardRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
   currentCardDoctor: { fontSize: 14, fontWeight: '700', color: Colors.text },
   currentCardSpec: { fontSize: 13, color: Colors.primary },
   currentCardSub: { fontSize: 13, color: Colors.textSecondary },
-  tokenBadge: { marginLeft: 'auto', fontSize: 11, fontWeight: '700', color: Colors.primary, backgroundColor: Colors.white, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  tokenBadge: {
+    marginLeft: 'auto',
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primary,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
 
   dateRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   datePill: {
-    alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14,
-    backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.borderLight, minWidth: 58,
-    ...crossPlatformShadow({ color: Colors.shadow, offsetY: 1, opacity: 1, radius: 4, elevation: 1 }),
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    minWidth: 58,
+    ...crossPlatformShadow({
+      color: Colors.shadow,
+      offsetY: 1,
+      opacity: 1,
+      radius: 4,
+      elevation: 1,
+    }),
   },
   datePillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  dateLabel: { fontSize: 9, fontWeight: '700', color: Colors.primary, textTransform: 'uppercase', marginBottom: 1 },
+  dateLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    marginBottom: 1,
+  },
   dateLabelActive: { color: Colors.white },
   dateDay: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary },
   dateDayActive: { color: Colors.white + 'CC' },
@@ -418,9 +523,14 @@ const styles = StyleSheet.create({
   sessionName: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 8 },
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   slotPill: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
-    backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.borderLight,
-    alignItems: 'center', minWidth: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    alignItems: 'center',
+    minWidth: 80,
   },
   slotPillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   slotPillDisabled: { backgroundColor: Colors.borderLight, borderColor: Colors.borderLight },
@@ -432,57 +542,120 @@ const styles = StyleSheet.create({
   noSlotsText: { fontSize: 14, color: Colors.textSecondary, marginTop: 8 },
 
   bottomBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14, backgroundColor: Colors.white,
-    borderTopWidth: 1, borderTopColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadowDark, offsetY: -2, opacity: 1, radius: 8, elevation: 8 }),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    ...crossPlatformShadow({
+      color: Colors.shadowDark,
+      offsetY: -2,
+      opacity: 1,
+      radius: 8,
+      elevation: 8,
+    }),
   },
   bottomBarDate: { fontSize: 13, fontWeight: '700', color: Colors.text },
   bottomBarSlot: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
-  ctaBtn: { backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 },
+  ctaBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
   ctaBtnText: { color: Colors.white, fontSize: 14, fontWeight: '700' },
 
   // Confirm step
-  confirmContent: { padding: 16, gap: 14 },
+  confirmContent: { ...contentColumn, padding: 16, gap: 14 },
   changeCard: {
-    backgroundColor: Colors.white, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: Colors.borderLight,
-    ...crossPlatformShadow({ color: Colors.shadow, offsetY: 2, opacity: 1, radius: 8, elevation: 2 }),
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...crossPlatformShadow({
+      color: Colors.shadow,
+      offsetY: 2,
+      opacity: 1,
+      radius: 8,
+      elevation: 2,
+    }),
   },
   changeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   changeSide: { flex: 1, alignItems: 'center', gap: 3 },
-  changeLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, color: Colors.textSecondary },
+  changeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    color: Colors.textSecondary,
+  },
   changeDate: { fontSize: 14, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   changeSlot: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
   changeToken: { fontSize: 11, color: Colors.textSecondary },
   noticeCard: {
-    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
-    backgroundColor: Colors.trustGreenLight, borderRadius: 12, padding: 12,
-    borderWidth: 1, borderColor: Colors.trustGreen + '40',
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    backgroundColor: Colors.trustGreenLight,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.trustGreen + '40',
   },
   noticeText: { flex: 1, fontSize: 13, color: Colors.text, lineHeight: 18 },
 
   primaryBtn: {
-    backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 14,
-    alignItems: 'center', marginTop: 4,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 4,
   },
   primaryBtnDisabled: { opacity: 0.6 },
   primaryBtnText: { color: Colors.white, fontSize: 15, fontWeight: '700' },
 
   // Success step
-  successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
+  successContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+  },
   successTitle: { fontSize: 26, fontWeight: '900', color: Colors.text },
   successSubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   successCard: {
-    backgroundColor: Colors.white, borderRadius: 16, padding: 20, width: '100%',
-    alignItems: 'center', gap: 10,
-    ...crossPlatformShadow({ color: Colors.shadow, offsetY: 2, opacity: 1, radius: 8, elevation: 2 }),
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    alignItems: 'center',
+    gap: 10,
+    ...crossPlatformShadow({
+      color: Colors.shadow,
+      offsetY: 2,
+      opacity: 1,
+      radius: 8,
+      elevation: 2,
+    }),
   },
   successLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
   successRef: { fontSize: 20, fontWeight: '900', color: Colors.primary },
   successRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   successDetail: { fontSize: 13, color: Colors.text, fontWeight: '600' },
-  tokenRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.primaryLight, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
+  tokenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
   tokenLabel: { fontSize: 12, color: Colors.textSecondary },
   tokenValue: { fontSize: 22, fontWeight: '900', color: Colors.primary },
 });

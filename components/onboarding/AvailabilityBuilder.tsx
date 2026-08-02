@@ -13,6 +13,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'rea
 import { Colors } from '../../constants/Colors';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import type { DayAvailability, SessionEntry } from '../../store/doctorOnboardingStore';
+import { FORM_MAX_WIDTH } from '../../theme';
 import { findConflict, timeToMinutes, intervalsOverlap } from '../../utils/timeRange';
 import type { BlockedInterval } from '../../utils/timeRange';
 
@@ -615,7 +616,7 @@ const styles = StyleSheet.create({
   },
   // Desktop web: centered dialog instead of a stretched bottom sheet.
   modalOverlayMd: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalContentMd: { width: '100%', maxWidth: 560, borderRadius: 24, maxHeight: '90%' },
+  modalContentMd: { width: '100%', maxWidth: FORM_MAX_WIDTH, borderRadius: 24, maxHeight: '90%' },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

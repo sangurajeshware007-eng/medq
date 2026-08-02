@@ -31,6 +31,8 @@ import {
 } from '../../../store/hospitalOnboardingStore';
 import { crossPlatformShadow } from '../../../utils/shadow';
 
+import { formColumn } from '@/theme';
+
 const STEP_LABELS = ['Details', 'Documents', 'Review'];
 
 // Maps each document slot to the backend FileType and whether it's public
@@ -345,6 +347,7 @@ const TILE_GAP = 10;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...formColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -356,7 +359,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20 },
+  scrollContent: { ...formColumn, padding: 20 },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',

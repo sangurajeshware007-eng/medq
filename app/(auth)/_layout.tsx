@@ -1,5 +1,6 @@
-import React from 'react';
 import { Redirect, Stack } from 'expo-router';
+import React from 'react';
+
 import { useAuthStore } from '../../store/authStore';
 
 /**

@@ -20,6 +20,8 @@ import { useHospitalManagerDashboard } from '../../hooks/useApiHooks';
 import type { LinkedDoctor } from '../../services/dashboardService';
 import Card from '../Card';
 
+import { contentColumn } from '@/theme';
+
 function DoctorRow({ doctor }: { doctor: LinkedDoctor }) {
   const isApproved = doctor.approvalStatus === 'APPROVED';
   return (
@@ -182,7 +184,7 @@ export default function HospitalManagerDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
+  container: { ...contentColumn, padding: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: {
     fontSize: 16,

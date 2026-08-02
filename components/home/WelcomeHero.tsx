@@ -38,6 +38,7 @@ import {
 
 import { Colors } from '../../constants/Colors';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { FORM_MAX_WIDTH } from '../../theme';
 import { crossPlatformShadow } from '../../utils/shadow';
 
 const GLYPH = require('../../assets/logo/new/app-icon.png');
@@ -321,8 +322,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   titleWide: { fontSize: 34 },
-  subtitleWide: { fontSize: 15, maxWidth: 560 },
-  searchBarWide: { maxWidth: 560, paddingVertical: 13 },
+  subtitleWide: { fontSize: 15, maxWidth: FORM_MAX_WIDTH },
+  searchBarWide: { maxWidth: FORM_MAX_WIDTH, paddingVertical: 13 },
   imageLayer: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',

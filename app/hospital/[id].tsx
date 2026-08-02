@@ -42,6 +42,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useHospital } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GALLERY_HEIGHT = 240;
 
@@ -596,7 +598,7 @@ const styles = StyleSheet.create({
   },
   headerSpacer: { width: 36 },
 
-  scrollContent: { paddingBottom: 24 },
+  scrollContent: { ...contentColumn, paddingBottom: 24 },
 
   // Gallery
   galleryWrap: {

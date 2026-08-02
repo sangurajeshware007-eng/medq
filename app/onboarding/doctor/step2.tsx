@@ -1,39 +1,60 @@
 /**
  * Doctor Onboarding Step 2 — Qualifications, Services, Conditions, Awards
  */
-import React, { useState } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react-native';
-import { Colors } from '../../../constants/Colors';
-import { crossPlatformShadow } from '../../../utils/shadow';
-import { useDoctorOnboardingStore } from '../../../store/doctorOnboardingStore';
-import onboardingService from '../../../services/onboardingService';
-import StepProgressBar from '../../../components/onboarding/StepProgressBar';
-import DynamicQualificationList from '../../../components/onboarding/DynamicQualificationList';
-import ChipSelector from '../../../components/onboarding/ChipSelector';
-import Input from '../../../components/Input';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import Button from '../../../components/Button';
+import Input from '../../../components/Input';
+import ChipSelector from '../../../components/onboarding/ChipSelector';
+import DynamicQualificationList from '../../../components/onboarding/DynamicQualificationList';
+import StepProgressBar from '../../../components/onboarding/StepProgressBar';
+import { Colors } from '../../../constants/Colors';
+import onboardingService from '../../../services/onboardingService';
+import { useDoctorOnboardingStore } from '../../../store/doctorOnboardingStore';
+import { crossPlatformShadow } from '../../../utils/shadow';
+
+import { formColumn } from '@/theme';
 
 const SERVICES = [
-  'ECG', 'Echo', 'Angioplasty', 'Surgery',
-  'X-Ray', 'MRI', 'Blood Test', 'Physiotherapy', 'Ultrasound',
+  'ECG',
+  'Echo',
+  'Angioplasty',
+  'Surgery',
+  'X-Ray',
+  'MRI',
+  'Blood Test',
+  'Physiotherapy',
+  'Ultrasound',
 ];
 
 const CONDITIONS = [
-  'Diabetes', 'Hypertension', 'Asthma', 'Heart Disease', 'Arthritis',
-  'Thyroid', 'PCOD', 'Back Pain', 'Migraine', 'Skin Allergy',
-  'Fever', 'Cold & Cough', 'Obesity', 'Depression', 'Anxiety',
+  'Diabetes',
+  'Hypertension',
+  'Asthma',
+  'Heart Disease',
+  'Arthritis',
+  'Thyroid',
+  'PCOD',
+  'Back Pain',
+  'Migraine',
+  'Skin Allergy',
+  'Fever',
+  'Cold & Cough',
+  'Obesity',
+  'Depression',
+  'Anxiety',
 ];
 
 const STEP_LABELS = ['Profile', 'Details', 'Hospitals', 'Review'];
 
 export default function DoctorStep2() {
   const router = useRouter();
-  const { details, updateDetails, markStepCompleted, setCurrentStep, completedSteps } = useDoctorOnboardingStore();
+  const { details, updateDetails, markStepCompleted, setCurrentStep, completedSteps } =
+    useDoctorOnboardingStore();
   const [loading, setLoading] = useState(false);
   const [showAwards, setShowAwards] = useState(details.awards.length > 0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -230,36 +251,58 @@ export default function DoctorStep2() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: Colors.white,
+    ...formColumn,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.white,
     ...crossPlatformShadow({ offsetY: 2, opacity: 0.08, radius: 8, elevation: 3 }),
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20 },
+  scrollContent: { ...formColumn, padding: 20 },
   errorText: { fontSize: 12, color: Colors.error, marginBottom: 12 },
   collapsibleHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 12, borderTopWidth: 1, borderTopColor: Colors.borderLight, marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    marginTop: 8,
   },
   collapsibleTitle: { fontSize: 16, fontWeight: '800', color: Colors.text },
   awardsSection: { marginTop: 8 },
   awardCard: {
-    backgroundColor: Colors.background, borderRadius: 14, padding: 14,
-    marginBottom: 12, borderWidth: 1, borderColor: Colors.borderLight,
+    backgroundColor: Colors.background,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   awardHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   awardIndex: { fontSize: 13, fontWeight: '700', color: Colors.primary },
   addBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
   },
   addBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
   navRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
   navBtn: { flex: 1 },
 });
-

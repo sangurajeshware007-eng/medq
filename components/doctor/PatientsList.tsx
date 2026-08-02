@@ -21,6 +21,8 @@ import { Colors } from '../../constants/Colors';
 import { useDoctorPatients } from '../../hooks/useApiHooks';
 import type { DoctorPatientSummary } from '../../services/doctorPatientService';
 
+import { contentColumn } from '@/theme';
+
 const SEARCH_DEBOUNCE_MS = 400;
 
 function initialOf(name: string | null): string {
@@ -167,6 +169,7 @@ export default function PatientsList() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...contentColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -177,6 +180,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
 
   searchWrap: {
+    ...contentColumn,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -194,7 +198,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 14, fontWeight: '600', color: Colors.text },
   emptyDesc: { fontSize: 12, color: Colors.textLight, textAlign: 'center' },
 
-  listContent: { padding: 16, paddingTop: 8, paddingBottom: 40 },
+  listContent: { ...contentColumn, padding: 16, paddingTop: 8, paddingBottom: 40 },
   countLine: { fontSize: 12, color: Colors.textLight, marginBottom: 8 },
   list: { gap: 8 },
 

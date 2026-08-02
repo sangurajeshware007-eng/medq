@@ -50,6 +50,8 @@ import {
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { crossPlatformShadow } from '../../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 function formatBookingDate(iso: string): string {
   const d = new Date(iso + 'T00:00:00');
   if (isNaN(d.getTime())) return iso;
@@ -486,7 +488,7 @@ const styles = StyleSheet.create({
   },
   centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   errorText: { fontSize: 14, color: Colors.text, textAlign: 'center', lineHeight: 20 },
-  content: { padding: 16, gap: 14 },
+  content: { ...contentColumn, padding: 16, gap: 14 },
 
   // Hero
   hero: {

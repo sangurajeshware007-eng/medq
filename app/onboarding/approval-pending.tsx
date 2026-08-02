@@ -5,29 +5,45 @@
  * APPROVED state: celebration + go-home CTA.
  * REJECTED state: rejection reason + edit-and-resubmit CTA.
  */
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
-  Clock, CheckCircle, XCircle, Home, Bell, Shield, Users,
-  User, GraduationCap, Stethoscope, Building2,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Home,
+  Bell,
+  Shield,
+  Users,
+  User,
+  GraduationCap,
+  Stethoscope,
+  Building2,
 } from 'lucide-react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import Button from '../../components/Button';
 import { Colors } from '../../constants/Colors';
-import { crossPlatformShadow } from '../../utils/shadow';
 import onboardingService, { type DoctorOnboardingResponse } from '../../services/onboardingService';
 import { useDoctorOnboardingStore } from '../../store/doctorOnboardingStore';
 import { useHospitalOnboardingStore } from '../../store/hospitalOnboardingStore';
-import Button from '../../components/Button';
+import { crossPlatformShadow } from '../../utils/shadow';
+
+import { formColumn } from '@/theme';
 
 const POLL_INTERVAL = 30_000;
 
 type StatusValue = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 const DAY_LABELS: Record<number, string> = {
-  0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
+  0: 'Sun',
+  1: 'Mon',
+  2: 'Tue',
+  3: 'Wed',
+  4: 'Thu',
+  5: 'Fri',
+  6: 'Sat',
 };
 
 export default function ApprovalPendingScreen() {
@@ -62,7 +78,9 @@ export default function ApprovalPendingScreen() {
         if (isDoctor) resetDoctorStore();
         else resetHospitalStore();
       }
-    } catch { /* silently keep current status */ }
+    } catch {
+      /* silently keep current status */
+    }
   }, [isDoctor, resetDoctorStore, resetHospitalStore]);
 
   // Fetch full submitted data so we can show it in read-only mode
@@ -72,8 +90,11 @@ export default function ApprovalPendingScreen() {
     try {
       const data = await onboardingService.getDoctorOnboarding();
       setProfileData(data);
-    } catch { /* profile section simply won't render */ }
-    finally { setProfileLoading(false); }
+    } catch {
+      /* profile section simply won't render */
+    } finally {
+      setProfileLoading(false);
+    }
   }, [isDoctor]);
 
   useEffect(() => {
@@ -90,9 +111,7 @@ export default function ApprovalPendingScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {isDoctor ? 'Doctor' : 'Hospital'} Application
-        </Text>
+        <Text style={styles.headerTitle}>{isDoctor ? 'Doctor' : 'Hospital'} Application</Text>
       </View>
 
       <ScrollView
@@ -100,7 +119,6 @@ export default function ApprovalPendingScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-
         {/* ── PENDING ──────────────────────────────────────────────────────── */}
         {status === 'PENDING' && (
           <>
@@ -113,7 +131,8 @@ export default function ApprovalPendingScreen() {
 
             <Text style={styles.title}>You're in the{'\n'}review queue!</Text>
             <Text style={styles.subtitle}>
-              Our medical verification team personally reviews every profile — ensuring only qualified doctors serve patients on MedQ+.
+              Our medical verification team personally reviews every profile — ensuring only
+              qualified doctors serve patients on MedQ+.
             </Text>
 
             {/* Review journey */}
@@ -145,16 +164,28 @@ export default function ApprovalPendingScreen() {
             <View style={styles.infoCard}>
               <Text style={styles.infoCardTitle}>What happens during review</Text>
               <View style={styles.infoRow}>
-                <View style={styles.infoIcon}><Shield size={16} color={Colors.primary} strokeWidth={2} /></View>
-                <Text style={styles.infoText}>Medical council verifies your registration number and credentials</Text>
+                <View style={styles.infoIcon}>
+                  <Shield size={16} color={Colors.primary} strokeWidth={2} />
+                </View>
+                <Text style={styles.infoText}>
+                  Medical council verifies your registration number and credentials
+                </Text>
               </View>
               <View style={styles.infoRow}>
-                <View style={styles.infoIcon}><Users size={16} color={Colors.primary} strokeWidth={2} /></View>
-                <Text style={styles.infoText}>Our team reviews your qualifications and hospital affiliations</Text>
+                <View style={styles.infoIcon}>
+                  <Users size={16} color={Colors.primary} strokeWidth={2} />
+                </View>
+                <Text style={styles.infoText}>
+                  Our team reviews your qualifications and hospital affiliations
+                </Text>
               </View>
               <View style={[styles.infoRow, { marginBottom: 0 }]}>
-                <View style={styles.infoIcon}><Bell size={16} color={Colors.primary} strokeWidth={2} /></View>
-                <Text style={styles.infoText}>You'll get an SMS and app notification the moment you're approved</Text>
+                <View style={styles.infoIcon}>
+                  <Bell size={16} color={Colors.primary} strokeWidth={2} />
+                </View>
+                <Text style={styles.infoText}>
+                  You'll get an SMS and app notification the moment you're approved
+                </Text>
               </View>
             </View>
 
@@ -162,9 +193,8 @@ export default function ApprovalPendingScreen() {
             <View style={styles.timeNotice}>
               <Clock size={15} color="#D97706" strokeWidth={2} style={{ marginTop: 1 }} />
               <Text style={styles.timeNoticeText}>
-                Approvals typically take{' '}
-                <Text style={styles.timeNoticeBold}>1–3 working days</Text>.
-                {' '}We review every application in the order received.
+                Approvals typically take <Text style={styles.timeNoticeBold}>1–3 working days</Text>
+                . We review every application in the order received.
               </Text>
             </View>
 
@@ -205,13 +235,20 @@ export default function ApprovalPendingScreen() {
                         />
                         <ReviewRow
                           label="Consultation Fee"
-                          value={profileData.profile.consultationFee != null ? `₹${profileData.profile.consultationFee}` : '—'}
+                          value={
+                            profileData.profile.consultationFee != null
+                              ? `₹${profileData.profile.consultationFee}`
+                              : '—'
+                          }
                         />
                         {profileData.profile.gender ? (
                           <ReviewRow label="Gender" value={profileData.profile.gender} />
                         ) : null}
                         {profileData.profile.clinicAddress ? (
-                          <ReviewRow label="Clinic Address" value={profileData.profile.clinicAddress} />
+                          <ReviewRow
+                            label="Clinic Address"
+                            value={profileData.profile.clinicAddress}
+                          />
                         ) : null}
                         {profileData.profile.bio ? (
                           <View style={styles.reviewRowColumn}>
@@ -221,18 +258,19 @@ export default function ApprovalPendingScreen() {
                             </Text>
                           </View>
                         ) : null}
-                        {profileData.profile.languagesSpoken && profileData.profile.languagesSpoken.length > 0 && (
-                          <View style={styles.reviewRowColumn}>
-                            <Text style={styles.reviewLabel}>Languages</Text>
-                            <View style={styles.chipRow}>
-                              {profileData.profile.languagesSpoken.map((l) => (
-                                <View key={l} style={styles.chip}>
-                                  <Text style={styles.chipText}>{l}</Text>
-                                </View>
-                              ))}
+                        {profileData.profile.languagesSpoken &&
+                          profileData.profile.languagesSpoken.length > 0 && (
+                            <View style={styles.reviewRowColumn}>
+                              <Text style={styles.reviewLabel}>Languages</Text>
+                              <View style={styles.chipRow}>
+                                {profileData.profile.languagesSpoken.map((l) => (
+                                  <View key={l} style={styles.chip}>
+                                    <Text style={styles.chipText}>{l}</Text>
+                                  </View>
+                                ))}
+                              </View>
                             </View>
-                          </View>
-                        )}
+                          )}
                       </View>
                     )}
 
@@ -247,7 +285,8 @@ export default function ApprovalPendingScreen() {
                           <View key={i} style={styles.qualItem}>
                             <CheckCircle size={13} color={Colors.trustGreen} strokeWidth={2.5} />
                             <Text style={styles.qualText}>
-                              {q.degree} — {q.institution}{q.year ? ` (${q.year})` : ''}
+                              {q.degree} — {q.institution}
+                              {q.year ? ` (${q.year})` : ''}
                             </Text>
                           </View>
                         ))}
@@ -256,51 +295,62 @@ export default function ApprovalPendingScreen() {
 
                     {/* Services & Conditions */}
                     {profileData.details &&
-                      (profileData.details.services.length > 0 || profileData.details.conditions.length > 0) && (
-                      <View style={styles.reviewCard}>
-                        <View style={styles.reviewCardHeader}>
-                          <Stethoscope size={15} color={Colors.primary} strokeWidth={2} />
-                          <Text style={styles.reviewCardTitle}>Services & Conditions</Text>
-                        </View>
-                        {profileData.details.services.length > 0 && (
-                          <>
-                            <Text style={styles.reviewSubLabel}>Services</Text>
-                            <View style={styles.chipRow}>
-                              {profileData.details.services.map((s) => (
-                                <View key={s} style={styles.chip}>
-                                  <Text style={styles.chipText}>{s}</Text>
-                                </View>
-                              ))}
-                            </View>
-                          </>
-                        )}
-                        {profileData.details.conditions.length > 0 && (
-                          <>
-                            <Text style={[styles.reviewSubLabel, { marginTop: 10 }]}>Conditions</Text>
-                            <View style={styles.chipRow}>
-                              {profileData.details.conditions.map((c) => (
-                                <View key={c} style={[styles.chip, { backgroundColor: Colors.trustGreenLight }]}>
-                                  <Text style={[styles.chipText, { color: '#16A34A' }]}>{c}</Text>
-                                </View>
-                              ))}
-                            </View>
-                          </>
-                        )}
-                        {profileData.details.awards && profileData.details.awards.length > 0 && (
-                          <>
-                            <Text style={[styles.reviewSubLabel, { marginTop: 10 }]}>Awards</Text>
-                            {profileData.details.awards.map((a, i) => (
-                              <View key={i} style={styles.qualItem}>
-                                <CheckCircle size={13} color={Colors.gold} strokeWidth={2.5} />
-                                <Text style={styles.qualText}>
-                                  {a.title}{a.awardedBy ? ` — ${a.awardedBy}` : ''}{a.year ? ` (${a.year})` : ''}
-                                </Text>
+                      (profileData.details.services.length > 0 ||
+                        profileData.details.conditions.length > 0) && (
+                        <View style={styles.reviewCard}>
+                          <View style={styles.reviewCardHeader}>
+                            <Stethoscope size={15} color={Colors.primary} strokeWidth={2} />
+                            <Text style={styles.reviewCardTitle}>Services & Conditions</Text>
+                          </View>
+                          {profileData.details.services.length > 0 && (
+                            <>
+                              <Text style={styles.reviewSubLabel}>Services</Text>
+                              <View style={styles.chipRow}>
+                                {profileData.details.services.map((s) => (
+                                  <View key={s} style={styles.chip}>
+                                    <Text style={styles.chipText}>{s}</Text>
+                                  </View>
+                                ))}
                               </View>
-                            ))}
-                          </>
-                        )}
-                      </View>
-                    )}
+                            </>
+                          )}
+                          {profileData.details.conditions.length > 0 && (
+                            <>
+                              <Text style={[styles.reviewSubLabel, { marginTop: 10 }]}>
+                                Conditions
+                              </Text>
+                              <View style={styles.chipRow}>
+                                {profileData.details.conditions.map((c) => (
+                                  <View
+                                    key={c}
+                                    style={[
+                                      styles.chip,
+                                      { backgroundColor: Colors.trustGreenLight },
+                                    ]}
+                                  >
+                                    <Text style={[styles.chipText, { color: '#16A34A' }]}>{c}</Text>
+                                  </View>
+                                ))}
+                              </View>
+                            </>
+                          )}
+                          {profileData.details.awards && profileData.details.awards.length > 0 && (
+                            <>
+                              <Text style={[styles.reviewSubLabel, { marginTop: 10 }]}>Awards</Text>
+                              {profileData.details.awards.map((a, i) => (
+                                <View key={i} style={styles.qualItem}>
+                                  <CheckCircle size={13} color={Colors.gold} strokeWidth={2.5} />
+                                  <Text style={styles.qualText}>
+                                    {a.title}
+                                    {a.awardedBy ? ` — ${a.awardedBy}` : ''}
+                                    {a.year ? ` (${a.year})` : ''}
+                                  </Text>
+                                </View>
+                              ))}
+                            </>
+                          )}
+                        </View>
+                      )}
 
                     {/* Linked Hospitals */}
                     {profileData.hospitals && profileData.hospitals.length > 0 && (
@@ -337,7 +387,9 @@ export default function ApprovalPendingScreen() {
                                 )}
                               </View>
                               <Text style={styles.hospitalAddr}>{h.address}</Text>
-                              <Text style={styles.hospitalFee}>₹{h.consultationFee} per consultation</Text>
+                              <Text style={styles.hospitalFee}>
+                                ₹{h.consultationFee} per consultation
+                              </Text>
                               {h.roomNumber ? (
                                 <Text style={styles.hospitalRoom}>Room / OPD: {h.roomNumber}</Text>
                               ) : null}
@@ -390,7 +442,8 @@ export default function ApprovalPendingScreen() {
             </View>
             <Text style={styles.title}>You're approved!{'\n'}Welcome aboard!</Text>
             <Text style={styles.subtitle}>
-              Your profile is now live. Patients across the region can discover and book appointments with you.
+              Your profile is now live. Patients across the region can discover and book
+              appointments with you.
             </Text>
             <Button
               title="Go to Home"
@@ -412,7 +465,8 @@ export default function ApprovalPendingScreen() {
             </View>
             <Text style={styles.title}>Application{'\n'}Not Approved</Text>
             <Text style={styles.subtitle}>
-              Please review the feedback below, update your profile, and resubmit. Our team is happy to re-review.
+              Please review the feedback below, update your profile, and resubmit. Our team is happy
+              to re-review.
             </Text>
             {rejectionReason && (
               <View style={styles.rejectionCard}>
@@ -422,7 +476,9 @@ export default function ApprovalPendingScreen() {
             )}
             <Button
               title="Edit & Resubmit"
-              onPress={() => router.replace(isDoctor ? '/onboarding/doctor/step1' : '/onboarding/hospital/step1')}
+              onPress={() =>
+                router.replace(isDoctor ? '/onboarding/doctor/step1' : '/onboarding/hospital/step1')
+              }
               size="large"
               style={{ width: '100%' }}
             />
@@ -437,7 +493,9 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.reviewRow}>
       <Text style={styles.reviewLabel}>{label}</Text>
-      <Text style={styles.reviewValue} numberOfLines={2}>{value}</Text>
+      <Text style={styles.reviewValue} numberOfLines={2}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -445,73 +503,117 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: Colors.white,
     ...crossPlatformShadow({ offsetY: 2, opacity: 0.08, radius: 8, elevation: 3 }),
   },
   headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   content: {
-    flexGrow: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 20, paddingVertical: 28,
+    ...formColumn,
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 28,
   },
 
   // ── Status hero ──────────────────────────────────────────────────────────
   illustration: { marginBottom: 20 },
   iconCircle: {
-    width: 108, height: 108, borderRadius: 54,
-    alignItems: 'center', justifyContent: 'center',
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 26, fontWeight: '900', color: Colors.text,
-    textAlign: 'center', marginBottom: 10, lineHeight: 34,
+    fontSize: 26,
+    fontWeight: '900',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 10,
+    lineHeight: 34,
   },
   subtitle: {
-    fontSize: 15, color: Colors.textSecondary,
-    textAlign: 'center', lineHeight: 22, marginBottom: 24,
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
   },
 
   // ── Timeline ─────────────────────────────────────────────────────────────
   timeline: { flexDirection: 'row', alignItems: 'flex-start', width: '100%', marginBottom: 24 },
   timelineStep: { alignItems: 'center', width: 52 },
   timelineDot: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: Colors.borderLight, borderWidth: 2, borderColor: Colors.border,
-    alignItems: 'center', justifyContent: 'center',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.borderLight,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   timelineDotDone: { backgroundColor: Colors.trustGreen, borderColor: Colors.trustGreen },
   timelineDotCurrent: {
-    backgroundColor: Colors.gold, borderColor: Colors.gold,
-    shadowColor: Colors.gold, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4,
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+    shadowColor: Colors.gold,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
   },
   timelineBar: { flex: 1, height: 2, backgroundColor: Colors.border, marginTop: 12 },
   timelineBarDone: { backgroundColor: Colors.trustGreen },
   timelineLabel: {
-    fontSize: 10, color: Colors.textLight, fontWeight: '700',
-    marginTop: 6, textAlign: 'center',
+    fontSize: 10,
+    color: Colors.textLight,
+    fontWeight: '700',
+    marginTop: 6,
+    textAlign: 'center',
   },
   timelineLabelDone: { color: Colors.trustGreen },
   timelineLabelCurrent: { color: '#D97706' },
 
   // ── Info card ────────────────────────────────────────────────────────────
   infoCard: {
-    width: '100%', backgroundColor: Colors.white, borderRadius: 16,
-    padding: 18, marginBottom: 14,
-    borderWidth: 1, borderColor: Colors.borderLight,
+    width: '100%',
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     ...crossPlatformShadow({ offsetY: 2, opacity: 0.05, radius: 8, elevation: 2 }),
   },
   infoCardTitle: { fontSize: 14, fontWeight: '800', color: Colors.text, marginBottom: 14 },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
   infoIcon: {
-    width: 34, height: 34, borderRadius: 9, backgroundColor: Colors.primaryLight,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   infoText: { flex: 1, fontSize: 13, color: Colors.text, lineHeight: 19 },
 
   // ── Time notice ──────────────────────────────────────────────────────────
   timeNotice: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: Colors.goldLight, borderRadius: 14, padding: 14,
-    width: '100%', marginBottom: 24, borderWidth: 1, borderColor: Colors.gold,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: Colors.goldLight,
+    borderRadius: 14,
+    padding: 14,
+    width: '100%',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: Colors.gold,
   },
   timeNoticeText: { flex: 1, fontSize: 13, color: '#92400E', lineHeight: 19 },
   timeNoticeBold: { fontWeight: '800', color: '#92400E' },
@@ -519,39 +621,66 @@ const styles = StyleSheet.create({
   // ── Profile section ──────────────────────────────────────────────────────
   profileSection: { width: '100%', marginBottom: 8 },
   profileSectionHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 14,
   },
   profileSectionTitle: { fontSize: 17, fontWeight: '900', color: Colors.text },
   readOnlyBadge: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     backgroundColor: Colors.borderLight,
   },
   readOnlyText: { fontSize: 11, fontWeight: '700', color: Colors.textLight },
 
   // ── Review card (each section) ───────────────────────────────────────────
   reviewCard: {
-    backgroundColor: Colors.white, borderRadius: 14, padding: 16,
-    marginBottom: 12, borderWidth: 1, borderColor: Colors.borderLight,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     ...crossPlatformShadow({ offsetY: 1, opacity: 0.05, radius: 6, elevation: 1 }),
   },
   reviewCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   reviewCardTitle: { fontSize: 14, fontWeight: '800', color: Colors.text },
   reviewRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  reviewRowColumn: { paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
+  reviewRowColumn: {
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
   reviewLabel: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
   reviewValue: {
-    fontSize: 13, fontWeight: '600', color: Colors.text,
-    maxWidth: '55%', textAlign: 'right',
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text,
+    maxWidth: '55%',
+    textAlign: 'right',
   },
   reviewValueBlock: { fontSize: 13, color: Colors.text, lineHeight: 18, marginTop: 4 },
-  reviewSubLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, marginBottom: 6, marginTop: 4 },
+  reviewSubLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    marginBottom: 6,
+    marginTop: 4,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   chip: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
     backgroundColor: Colors.primaryLight,
   },
   chipText: { fontSize: 12, fontWeight: '600', color: Colors.primary },
@@ -564,7 +693,9 @@ const styles = StyleSheet.create({
   hospitalItemHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
   hospitalName: { fontSize: 14, fontWeight: '800', color: Colors.text, flex: 1 },
   primaryBadge: {
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     backgroundColor: Colors.primaryLight,
   },
   primaryBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
@@ -574,15 +705,23 @@ const styles = StyleSheet.create({
   availList: { marginTop: 8, gap: 6 },
   availDay: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   availDayLabel: {
-    fontSize: 12, fontWeight: '700', color: Colors.primary,
-    width: 34, paddingTop: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    width: 34,
+    paddingTop: 1,
   },
   availSession: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
 
   // ── Rejection ────────────────────────────────────────────────────────────
   rejectionCard: {
-    backgroundColor: Colors.errorLight, borderRadius: 14, padding: 16,
-    borderWidth: 1, borderColor: Colors.error, width: '100%', marginBottom: 20,
+    backgroundColor: Colors.errorLight,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    width: '100%',
+    marginBottom: 20,
   },
   rejectionTitle: { fontSize: 13, fontWeight: '700', color: Colors.error, marginBottom: 6 },
   rejectionText: { fontSize: 14, color: Colors.text, lineHeight: 20 },

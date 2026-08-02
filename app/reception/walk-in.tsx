@@ -1,12 +1,23 @@
 import { useRouter } from 'expo-router';
 import {
-  ChevronRight, Building2, Stethoscope, Clock,
-  CheckCircle, UserCheck, UserX,
+  ChevronRight,
+  Building2,
+  Stethoscope,
+  Clock,
+  CheckCircle,
+  UserCheck,
+  UserX,
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
-  Alert, ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +31,8 @@ import receptionService, {
   type ReceptionHospitalItem,
 } from '../../services/receptionService';
 import { getApiErrorMessage } from '../../utils/apiError';
+
+import { formColumn } from '@/theme';
 
 type LookupState = 'idle' | 'loading' | 'found' | 'not_found';
 
@@ -74,7 +87,8 @@ export default function WalkInRegistrationScreen() {
   const [done, setDone] = useState<CreateWalkInResponse | null>(null);
 
   useEffect(() => {
-    receptionService.myHospitals()
+    receptionService
+      .myHospitals()
       .then((list) => {
         setHospitals(list);
         if (list.length === 1) setHospital(list[0]);
@@ -84,9 +98,14 @@ export default function WalkInRegistrationScreen() {
   }, []);
 
   useEffect(() => {
-    if (!hospital) { setDoctors([]); setDoctor(null); return; }
+    if (!hospital) {
+      setDoctors([]);
+      setDoctor(null);
+      return;
+    }
     setLoadingDoctors(true);
-    receptionService.doctorsAtHospital(hospital.hospitalId)
+    receptionService
+      .doctorsAtHospital(hospital.hospitalId)
       .then((list) => {
         setDoctors(list);
         if (list.length === 1) setDoctor(list[0]);
@@ -96,10 +115,15 @@ export default function WalkInRegistrationScreen() {
   }, [hospital]);
 
   useEffect(() => {
-    if (!doctor || !date) { setSlots([]); setSlot(null); return; }
+    if (!doctor || !date) {
+      setSlots([]);
+      setSlot(null);
+      return;
+    }
     setLoadingSlots(true);
     setSlot(null);
-    doctorService.getAvailableSlots(doctor.doctorId, date)
+    doctorService
+      .getAvailableSlots(doctor.doctorId, date)
       .then((response) => {
         const flat: TimeSlot[] = response.sessions.flatMap((s) => s.slots);
         setSlots(flat);
@@ -162,7 +186,10 @@ export default function WalkInRegistrationScreen() {
       });
       setDone(result);
     } catch (e: unknown) {
-      Alert.alert('Could not register walk-in', getApiErrorMessage(e, 'Failed to register walk-in.'));
+      Alert.alert(
+        'Could not register walk-in',
+        getApiErrorMessage(e, 'Failed to register walk-in.'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -192,7 +219,11 @@ export default function WalkInRegistrationScreen() {
             The patient has been checked in immediately and added to the token queue.
             {done.createdNewUser && '\n\nA new patient profile was created with this phone number.'}
           </Text>
-          <Button title="Done" onPress={() => router.back()} style={{ marginTop: 24, width: '100%' }} />
+          <Button
+            title="Done"
+            onPress={() => router.back()}
+            style={{ marginTop: 24, width: '100%' }}
+          />
           <TouchableOpacity style={{ marginTop: 12 }} onPress={resetForAnother}>
             <Text style={styles.linkText}>Register Another</Text>
           </TouchableOpacity>
@@ -201,14 +232,24 @@ export default function WalkInRegistrationScreen() {
     );
   }
 
-  const canSubmit = !!hospital && !!doctor && !!slot && digits.length === 10 && !submitting
-    && (lookupState === 'found' || patientName.trim().length > 0);
+  const canSubmit =
+    !!hospital &&
+    !!doctor &&
+    !!slot &&
+    digits.length === 10 &&
+    !submitting &&
+    (lookupState === 'found' || patientName.trim().length > 0);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ChevronRight size={20} color={Colors.text} strokeWidth={2.5} style={{ transform: [{ rotate: '180deg' }] }} />
+          <ChevronRight
+            size={20}
+            color={Colors.text}
+            strokeWidth={2.5}
+            style={{ transform: [{ rotate: '180deg' }] }}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Walk-in Registration</Text>
       </View>
@@ -225,14 +266,31 @@ export default function WalkInRegistrationScreen() {
             <TouchableOpacity
               key={h.hospitalId}
               style={[styles.row, hospital?.hospitalId === h.hospitalId && styles.rowSelected]}
-              onPress={() => { setHospital(h); setDoctor(null); setSlot(null); }}
+              onPress={() => {
+                setHospital(h);
+                setDoctor(null);
+                setSlot(null);
+              }}
               activeOpacity={0.8}
             >
-              <Building2 size={18} color={hospital?.hospitalId === h.hospitalId ? Colors.primary : Colors.textSecondary} strokeWidth={2} />
-              <Text style={[styles.rowText, hospital?.hospitalId === h.hospitalId && { color: Colors.primary }]}>
+              <Building2
+                size={18}
+                color={
+                  hospital?.hospitalId === h.hospitalId ? Colors.primary : Colors.textSecondary
+                }
+                strokeWidth={2}
+              />
+              <Text
+                style={[
+                  styles.rowText,
+                  hospital?.hospitalId === h.hospitalId && { color: Colors.primary },
+                ]}
+              >
                 {h.hospitalName}
               </Text>
-              {hospital?.hospitalId === h.hospitalId && <CheckCircle size={16} color={Colors.primary} strokeWidth={2.5} />}
+              {hospital?.hospitalId === h.hospitalId && (
+                <CheckCircle size={16} color={Colors.primary} strokeWidth={2.5} />
+              )}
             </TouchableOpacity>
           ))
         )}
@@ -250,19 +308,33 @@ export default function WalkInRegistrationScreen() {
                 <TouchableOpacity
                   key={d.doctorId}
                   style={[styles.row, doctor?.doctorId === d.doctorId && styles.rowSelected]}
-                  onPress={() => { setDoctor(d); setSlot(null); }}
+                  onPress={() => {
+                    setDoctor(d);
+                    setSlot(null);
+                  }}
                   activeOpacity={0.8}
                 >
-                  <Stethoscope size={18} color={doctor?.doctorId === d.doctorId ? Colors.primary : Colors.textSecondary} strokeWidth={2} />
+                  <Stethoscope
+                    size={18}
+                    color={doctor?.doctorId === d.doctorId ? Colors.primary : Colors.textSecondary}
+                    strokeWidth={2}
+                  />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.rowText, doctor?.doctorId === d.doctorId && { color: Colors.primary }]}>
+                    <Text
+                      style={[
+                        styles.rowText,
+                        doctor?.doctorId === d.doctorId && { color: Colors.primary },
+                      ]}
+                    >
                       {d.name}
                     </Text>
                     <Text style={styles.rowSub}>
                       {d.specialization.replace(/_/g, ' ')} · ₹{d.consultationFee}
                     </Text>
                   </View>
-                  {doctor?.doctorId === d.doctorId && <CheckCircle size={16} color={Colors.primary} strokeWidth={2.5} />}
+                  {doctor?.doctorId === d.doctorId && (
+                    <CheckCircle size={16} color={Colors.primary} strokeWidth={2.5} />
+                  )}
                 </TouchableOpacity>
               ))
             )}
@@ -273,7 +345,11 @@ export default function WalkInRegistrationScreen() {
         {doctor && (
           <>
             <Text style={[styles.label, { marginTop: 18 }]}>Date</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8 }}
+            >
               {dates.map((iso) => {
                 const { day, date: lbl } = formatDateLabel(iso);
                 const selected = date === iso;
@@ -283,8 +359,12 @@ export default function WalkInRegistrationScreen() {
                     onPress={() => setDate(iso)}
                     style={[styles.dateChip, selected && styles.dateChipSelected]}
                   >
-                    <Text style={[styles.dateChipDay, selected && { color: Colors.white }]}>{day}</Text>
-                    <Text style={[styles.dateChipDate, selected && { color: Colors.white }]}>{lbl}</Text>
+                    <Text style={[styles.dateChipDay, selected && { color: Colors.white }]}>
+                      {day}
+                    </Text>
+                    <Text style={[styles.dateChipDate, selected && { color: Colors.white }]}>
+                      {lbl}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -318,7 +398,9 @@ export default function WalkInRegistrationScreen() {
                     >
                       <Clock
                         size={11}
-                        color={selected ? Colors.white : disabled ? Colors.textLight : Colors.primary}
+                        color={
+                          selected ? Colors.white : disabled ? Colors.textLight : Colors.primary
+                        }
                         strokeWidth={2.5}
                       />
                       <Text
@@ -343,7 +425,9 @@ export default function WalkInRegistrationScreen() {
           <>
             <Text style={[styles.label, { marginTop: 22 }]}>Patient Phone</Text>
             <View style={[styles.phoneBox, lookupState === 'found' && styles.phoneBoxFound]}>
-              <View style={styles.prefix}><Text style={styles.prefixText}>+91</Text></View>
+              <View style={styles.prefix}>
+                <Text style={styles.prefixText}>+91</Text>
+              </View>
               <View style={styles.phoneDivider} />
               <TextInput
                 style={styles.phoneInput}
@@ -355,20 +439,36 @@ export default function WalkInRegistrationScreen() {
                 onChangeText={handleDigitsChange}
               />
               {lookupState === 'loading' && (
-                <ActivityIndicator size="small" color={Colors.primary} style={{ marginRight: 12 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={Colors.primary}
+                  style={{ marginRight: 12 }}
+                />
               )}
               {lookupState === 'found' && (
-                <UserCheck size={18} color={Colors.trustGreen} strokeWidth={2.5} style={{ marginRight: 12 }} />
+                <UserCheck
+                  size={18}
+                  color={Colors.trustGreen}
+                  strokeWidth={2.5}
+                  style={{ marginRight: 12 }}
+                />
               )}
               {lookupState === 'not_found' && (
-                <UserX size={18} color={Colors.textSecondary} strokeWidth={2} style={{ marginRight: 12 }} />
+                <UserX
+                  size={18}
+                  color={Colors.textSecondary}
+                  strokeWidth={2}
+                  style={{ marginRight: 12 }}
+                />
               )}
             </View>
 
             {lookupState === 'found' && foundPatient && (
               <View style={styles.foundCard}>
                 <View style={styles.foundAvatar}>
-                  <Text style={styles.foundInitial}>{foundPatient.name.charAt(0).toUpperCase()}</Text>
+                  <Text style={styles.foundInitial}>
+                    {foundPatient.name.charAt(0).toUpperCase()}
+                  </Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.foundName}>{foundPatient.name}</Text>
@@ -425,81 +525,155 @@ export default function WalkInRegistrationScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+    ...formColumn,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { ...formColumn, padding: 16, paddingBottom: 40 },
   label: {
-    fontSize: 13, fontWeight: '700', color: Colors.textSecondary,
-    marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   subLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
   emptyText: { fontSize: 13, color: Colors.textSecondary, paddingVertical: 8 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.borderLight,
-    backgroundColor: Colors.white, marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.white,
+    marginBottom: 8,
   },
   rowSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
   rowText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.text },
   rowSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
   dateChip: {
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 12, borderWidth: 1.5, borderColor: Colors.borderLight,
-    backgroundColor: Colors.white, alignItems: 'center', minWidth: 64,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    minWidth: 64,
   },
   dateChipSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   dateChipDay: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary },
   dateChipDate: { fontSize: 13, fontWeight: '800', color: Colors.text, marginTop: 2 },
   slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   slotChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 8, borderWidth: 1.5, borderColor: Colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
     backgroundColor: Colors.white,
   },
   slotChipSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  slotChipDisabled: { backgroundColor: Colors.background, borderColor: Colors.borderLight, opacity: 0.5 },
+  slotChipDisabled: {
+    backgroundColor: Colors.background,
+    borderColor: Colors.borderLight,
+    opacity: 0.5,
+  },
   slotChipText: { fontSize: 12, fontWeight: '700', color: Colors.text },
   phoneBox: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.white, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
     overflow: 'hidden',
   },
   phoneBoxFound: { borderColor: Colors.trustGreen },
   prefix: { paddingHorizontal: 14, paddingVertical: 13, backgroundColor: Colors.primaryLight },
   prefixText: { fontSize: 15, fontWeight: '700', color: Colors.primary },
   phoneDivider: { width: 1, height: '100%', backgroundColor: Colors.borderLight },
-  phoneInput: { flex: 1, fontSize: 15, color: Colors.text, paddingHorizontal: 14, paddingVertical: 13 },
+  phoneInput: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.text,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
   foundCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginTop: 10, padding: 12, borderRadius: 12,
-    backgroundColor: '#F0FDF4', borderWidth: 1.5, borderColor: Colors.trustGreen,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1.5,
+    borderColor: Colors.trustGreen,
   },
   foundAvatar: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: Colors.trustGreen, alignItems: 'center', justifyContent: 'center',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.trustGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   foundInitial: { fontSize: 16, fontWeight: '800', color: Colors.white },
   foundName: { fontSize: 14, fontWeight: '700', color: Colors.text },
   foundHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   textInput: {
-    backgroundColor: Colors.white, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.borderLight,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: Colors.text,
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.text,
   },
   hint: { fontSize: 12, color: Colors.textSecondary, marginTop: 6, lineHeight: 17 },
   successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  successTitle: { fontSize: 22, fontWeight: '900', color: Colors.text, marginTop: 16, marginBottom: 16 },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 16,
+  },
   successDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   refCard: {
-    backgroundColor: Colors.primaryLight, borderRadius: 12, padding: 14,
-    alignItems: 'center', marginBottom: 14, minWidth: 200,
-    borderWidth: 1.5, borderColor: Colors.primary, borderStyle: 'dashed',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 14,
+    minWidth: 200,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
   },
-  refLabel: { fontSize: 11, fontWeight: '700', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  refLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   refValue: { fontSize: 18, fontWeight: '900', color: Colors.text, marginTop: 4, letterSpacing: 1 },
   linkText: { color: Colors.primary, fontWeight: '600', fontSize: 14 },
 });

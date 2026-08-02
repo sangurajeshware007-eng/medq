@@ -24,6 +24,8 @@ import { useHospitalOnboardingStore } from '../../../store/hospitalOnboardingSto
 import type { HospitalAddressStep } from '../../../store/hospitalOnboardingStore';
 import { crossPlatformShadow } from '../../../utils/shadow';
 
+import { formColumn } from '@/theme';
+
 const STEP_LABELS = ['Details', 'Documents', 'Review'];
 
 /** Flatten the structured address into a single display string for the review card. */
@@ -221,6 +223,7 @@ export default function HospitalStep3() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...formColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -232,7 +235,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20 },
+  scrollContent: { ...formColumn, padding: 20 },
   reviewTitle: { fontSize: 20, fontWeight: '900', color: Colors.text, marginBottom: 4 },
   reviewSubtitle: { fontSize: 14, color: Colors.textSecondary, marginBottom: 20, lineHeight: 20 },
   reviewCard: { marginBottom: 14 },

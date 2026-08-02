@@ -44,6 +44,8 @@ import {
 } from '../../hooks/useApiHooks';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 /** Render "2026-05-08" → "Fri, 8 May" — easier to scan on a card */
 function formatBookingDate(iso: string): string {
   const d = new Date(iso + 'T00:00:00');
@@ -541,9 +543,7 @@ const styles = StyleSheet.create({
   list: {
     flex: 1,
   },
-  listContent: {
-    padding: 16,
-  },
+  listContent: { ...contentColumn, padding: 16 },
   bookingCard: {
     marginBottom: 14,
     paddingLeft: 18, // make room for the accent stripe

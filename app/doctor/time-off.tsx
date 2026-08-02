@@ -5,6 +5,8 @@
  * patients see no slots and any pending/confirmed bookings are auto-cancelled
  * server-side (with the same BookingCancelled event used for normal cancels).
  */
+import { useRouter } from 'expo-router';
+import { ChevronLeft, CalendarOff, Trash2, AlertTriangle, Plus } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -18,24 +20,14 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { Calendar as CalendarView, type DateData } from 'react-native-calendars';
-import {
-  ChevronLeft,
-  CalendarOff,
-  Trash2,
-  AlertTriangle,
-  Plus,
-} from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '../../constants/Colors';
-import {
-  useTimeOffList,
-  useCreateTimeOff,
-  useDeleteTimeOff,
-} from '../../hooks/useApiHooks';
+import { useTimeOffList, useCreateTimeOff, useDeleteTimeOff } from '../../hooks/useApiHooks';
 import type { TimeOffEntry } from '../../services/timeOffService';
+
+import { formColumn } from '@/theme';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -261,7 +253,8 @@ export default function TimeOffScreen() {
               <CalendarOff size={28} color={Colors.textLight} strokeWidth={1.5} />
               <Text style={styles.emptyTitle}>No blocked dates yet</Text>
               <Text style={styles.emptyHint}>
-                Pick a date range above to take time off — your availability will reopen automatically after the end date.
+                Pick a date range above to take time off — your availability will reopen
+                automatically after the end date.
               </Text>
             </View>
           )}
@@ -287,7 +280,8 @@ export default function TimeOffScreen() {
           <View style={styles.footer}>
             <AlertTriangle size={14} color={Colors.textSecondary} strokeWidth={2} />
             <Text style={styles.footerText}>
-              Patients see your blocked dates as "no slots available." Past entries can't be removed.
+              Patients see your blocked dates as "no slots available." Past entries can't be
+              removed.
             </Text>
           </View>
         </ScrollView>
@@ -315,6 +309,7 @@ function enumerateDates(start: string, end: string): string[] {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...formColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -326,7 +321,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { ...formColumn, padding: 20, paddingBottom: 40 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.text, marginBottom: 4 },
   sectionHint: { fontSize: 12, color: Colors.textSecondary, marginBottom: 12 },
   calendarWrap: {
@@ -397,6 +392,7 @@ const styles = StyleSheet.create({
   entryReason: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   entryDeleteBtn: { padding: 4 },
   footer: {
+    ...formColumn,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,

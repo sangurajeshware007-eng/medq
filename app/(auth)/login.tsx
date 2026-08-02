@@ -35,6 +35,7 @@ import { ENV } from '@/config/environment';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { formColumn } from '@/theme';
 
 const BRAND_LOGO = require('../../assets/logo/new/logo-icon.png');
 
@@ -203,9 +204,7 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'center',
     // Readable form column on wide screens (web) — no effect on phones.
-    maxWidth: 560,
-    width: '100%',
-    alignSelf: 'center',
+    ...formColumn,
   },
   langRow: { position: 'absolute', top: 16, right: 0 },
   logoSection: { alignItems: 'center', marginBottom: 48 },

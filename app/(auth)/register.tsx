@@ -22,6 +22,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { registerSchema, type RegisterFormValues } from '../../utils/authSchemas';
 
+import { formColumn } from '@/theme';
+
 const BRAND_LOGO = require('../../assets/logo/new/logo-icon.png');
 // Phase 1: English only
 // import LanguageToggle from '../../components/LanguageToggle';
@@ -297,7 +299,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   keyboardView: { flex: 1 },
-  scrollContent: { flexGrow: 1, padding: 24, justifyContent: 'center' },
+  scrollContent: { ...formColumn, flexGrow: 1, padding: 24, justifyContent: 'center' },
   langRow: { position: 'absolute', top: 16, right: 0 },
   logoSection: { alignItems: 'center', marginBottom: 36 },
   brandLogo: { width: 240, height: 91, marginBottom: 12 },

@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { formColumn } from '@/theme';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -256,9 +257,7 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 16,
     // Readable form column on wide screens (web) — no effect on phones.
-    maxWidth: 560,
-    width: '100%',
-    alignSelf: 'center',
+    ...formColumn,
   },
 
   backBtn: { marginBottom: 32 },

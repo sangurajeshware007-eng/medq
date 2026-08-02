@@ -13,6 +13,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking, Platform } fr
 
 import { Colors } from '../../constants/Colors';
 import type { HospitalListItem } from '../../services/hospitalService';
+import { FORM_MAX_WIDTH } from '../../theme';
 
 interface EmergencySheetProps {
   visible: boolean;
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 34,
     width: '100%',
-    maxWidth: 560,
+    maxWidth: FORM_MAX_WIDTH,
     alignSelf: 'center',
   },
   header: {

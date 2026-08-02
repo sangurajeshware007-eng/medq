@@ -50,6 +50,8 @@ import { statusBg, statusColor, statusLabel, sanitizePhone } from '../doctor/app
 
 import QuickActionsRow from './QuickActionsRow';
 
+import { contentColumn } from '@/theme';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 /** YYYY-MM-DD string for a Date object in LOCAL time.
@@ -627,7 +629,7 @@ function RevenuePill({
 // ─── Styles ───────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
+  container: { ...contentColumn, padding: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyTitle: {
     fontSize: 16,

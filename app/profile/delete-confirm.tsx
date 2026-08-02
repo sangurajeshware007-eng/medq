@@ -5,6 +5,8 @@
  * irreversible delete is submitted. Mirrors the "type your username to
  * confirm" pattern used by GitHub, Instagram, LinkedIn.
  */
+import { useRouter } from 'expo-router';
+import { ChevronLeft, AlertTriangle, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   View,
@@ -19,12 +21,12 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { ChevronLeft, AlertTriangle, Trash2 } from 'lucide-react-native';
 
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useDeleteProfile } from '../../hooks/useApiHooks';
+
+import { formColumn } from '@/theme';
 
 export default function DeleteAccountConfirmScreen() {
   const router = useRouter();
@@ -98,8 +100,8 @@ export default function DeleteAccountConfirmScreen() {
             <AlertTriangle size={28} color={Colors.error} strokeWidth={2.2} />
             <Text style={styles.warningTitle}>This cannot be undone</Text>
             <Text style={styles.warningBody}>
-              Your profile will be permanently removed. Upcoming bookings will be cancelled and
-              you will be signed out from all devices.
+              Your profile will be permanently removed. Upcoming bookings will be cancelled and you
+              will be signed out from all devices.
             </Text>
           </View>
 
@@ -179,6 +181,7 @@ function Bullet({ text }: { text: string }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...formColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -190,7 +193,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { ...formColumn, padding: 20, paddingBottom: 40 },
   warningCard: {
     backgroundColor: Colors.errorLight,
     borderRadius: 14,

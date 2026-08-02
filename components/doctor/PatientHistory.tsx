@@ -31,6 +31,8 @@ import type { PatientVisit } from '../../services/doctorPatientService';
 
 import { sanitizePhone, statusBg, statusColor, statusLabel } from './appointmentStatus';
 
+import { contentColumn } from '@/theme';
+
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, {
@@ -176,6 +178,7 @@ export default function PatientHistory() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...contentColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -207,7 +210,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
   emptyTitle: { fontSize: 14, fontWeight: '600', color: Colors.text },
 
-  listContent: { padding: 16, paddingTop: 8, paddingBottom: 40 },
+  listContent: { ...contentColumn, padding: 16, paddingTop: 8, paddingBottom: 40 },
   countLine: { fontSize: 12, color: Colors.textLight, marginBottom: 8 },
   list: { gap: 8 },
 

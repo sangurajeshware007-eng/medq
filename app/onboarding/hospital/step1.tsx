@@ -30,10 +30,15 @@ import storageService from '../../../services/storageService';
 import { useHospitalOnboardingStore } from '../../../store/hospitalOnboardingStore';
 import { crossPlatformShadow } from '../../../utils/shadow';
 
+import { formColumn } from '@/theme';
+
 // Phone helpers — the user always enters 10 digits, +91 is implicit.
 // Strip a leading "+91" / "91" (and any non-digits) so we always store the bare 10 digits.
 const stripIndianPrefix = (v: string): string =>
-  v.replace(/^\+?91/, '').replace(/[^0-9]/g, '').slice(0, 10);
+  v
+    .replace(/^\+?91/, '')
+    .replace(/[^0-9]/g, '')
+    .slice(0, 10);
 const toE164 = (v: string): string => `+91${stripIndianPrefix(v)}`;
 
 const DEPARTMENTS = [
@@ -159,7 +164,9 @@ export default function HospitalStep1() {
         locationLat: profile.locationLat ? parseFloat(profile.locationLat) : undefined,
         locationLng: profile.locationLng ? parseFloat(profile.locationLng) : undefined,
         phone: toE164(profile.phone),
-        emergencyContact: profile.emergencyContact.trim() ? toE164(profile.emergencyContact) : undefined,
+        emergencyContact: profile.emergencyContact.trim()
+          ? toE164(profile.emergencyContact)
+          : undefined,
         departments: allDepts,
         establishedYear: profile.establishedYear ? parseInt(profile.establishedYear) : undefined,
         totalBeds: profile.totalBeds ? parseInt(profile.totalBeds) : undefined,
@@ -414,6 +421,7 @@ export default function HospitalStep1() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...formColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -425,7 +433,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20 },
+  scrollContent: { ...formColumn, padding: 20 },
   fieldLabel: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 4 },
   fieldHelper: { fontSize: 12, color: Colors.textSecondary, marginBottom: 10, lineHeight: 16 },
   locationRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },

@@ -48,6 +48,8 @@ import { bookingService } from '../../services/bookingService';
 import type { TimeSlot, Session } from '../../services/doctorService';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function getUpcomingDates(count: number) {
@@ -874,10 +876,7 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 32,
   },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
+  scrollContent: { ...contentColumn, paddingHorizontal: 16, paddingTop: 12 },
   miniCard: {
     marginBottom: 16,
   },

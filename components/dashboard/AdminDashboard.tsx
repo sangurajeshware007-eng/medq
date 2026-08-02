@@ -47,6 +47,8 @@ import {
 } from '../../hooks/useApiHooks';
 import Card from '../Card';
 
+import { contentColumn } from '@/theme';
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type ModalTarget = { type: 'doctor' | 'hospital'; id: string; name: string } | null;
@@ -411,9 +413,7 @@ export default function AdminDashboard() {
                       subtitle="Hospital"
                       type="HOSPITAL"
                       onApprove={() => approveHospital.mutate(h.id)}
-                      onReject={() =>
-                        setRejectTarget({ type: 'hospital', id: h.id, name: h.name })
-                      }
+                      onReject={() => setRejectTarget({ type: 'hospital', id: h.id, name: h.name })}
                     />
                     {idx < pendingHospitals.length - 1 && <View style={styles.divider} />}
                   </View>
@@ -480,10 +480,7 @@ export default function AdminDashboard() {
                             ]}
                           >
                             <Text
-                              style={[
-                                styles.statusText,
-                                { color: statusColor(d.approvalStatus) },
-                              ]}
+                              style={[styles.statusText, { color: statusColor(d.approvalStatus) }]}
                             >
                               {d.approvalStatus}
                             </Text>
@@ -505,9 +502,7 @@ export default function AdminDashboard() {
                                   false: Colors.borderLight,
                                   true: Colors.trustGreenLight,
                                 }}
-                                thumbColor={
-                                  d.isActive ? Colors.trustGreen : Colors.textSecondary
-                                }
+                                thumbColor={d.isActive ? Colors.trustGreen : Colors.textSecondary}
                                 ios_backgroundColor={Colors.borderLight}
                               />
                             </View>
@@ -584,10 +579,7 @@ export default function AdminDashboard() {
                             ]}
                           >
                             <Text
-                              style={[
-                                styles.statusText,
-                                { color: statusColor(h.approvalStatus) },
-                              ]}
+                              style={[styles.statusText, { color: statusColor(h.approvalStatus) }]}
                             >
                               {h.approvalStatus}
                             </Text>
@@ -604,16 +596,12 @@ export default function AdminDashboard() {
                               </Text>
                               <Switch
                                 value={h.isActive}
-                                onValueChange={(v) =>
-                                  handleHospitalToggle(h.hospitalId, h.name, v)
-                                }
+                                onValueChange={(v) => handleHospitalToggle(h.hospitalId, h.name, v)}
                                 trackColor={{
                                   false: Colors.borderLight,
                                   true: Colors.trustGreenLight,
                                 }}
-                                thumbColor={
-                                  h.isActive ? Colors.trustGreen : Colors.textSecondary
-                                }
+                                thumbColor={h.isActive ? Colors.trustGreen : Colors.textSecondary}
                                 ios_backgroundColor={Colors.borderLight}
                               />
                             </View>
@@ -638,7 +626,7 @@ export default function AdminDashboard() {
 // ── Styles ─────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
+  container: { ...contentColumn, padding: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
 
   adminHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },

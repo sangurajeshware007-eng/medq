@@ -35,6 +35,8 @@ import Card from '../Card';
 import { sanitizePhone } from './appointmentStatus';
 import QueuePatientRow from './QueuePatientRow';
 
+import { contentColumn } from '@/theme';
+
 /** Passed-over patients: checked in, still CONFIRMED, below the current token. */
 function skippedEntries(state: DoctorQueueState): QueueEntry[] {
   return state.entries.filter(
@@ -277,6 +279,7 @@ export function QueueScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   header: {
+    ...contentColumn,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -285,7 +288,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 2 },
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
-  container: { padding: 16, paddingBottom: 40, gap: 12 },
+  container: { ...contentColumn, padding: 16, paddingBottom: 40, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
 
   heroCard: { alignItems: 'center', gap: 8, paddingVertical: 28 },

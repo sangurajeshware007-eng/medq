@@ -24,6 +24,7 @@ import {
 
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
+import { formColumn } from '@/theme';
 
 export default function CompleteProfileScreen() {
   const { completeProfile, loading, pendingSocialProfile } = useAuth();
@@ -163,7 +164,7 @@ export default function CompleteProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   keyboardView: { flex: 1 },
-  scrollContent: { flexGrow: 1, padding: 24, justifyContent: 'center' },
+  scrollContent: { ...formColumn, flexGrow: 1, padding: 24, justifyContent: 'center' },
 
   header: { alignItems: 'center', marginBottom: 40 },
   iconCircle: {

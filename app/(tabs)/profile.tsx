@@ -56,6 +56,8 @@ import {
 import { displayPhone } from '../../services/authService';
 import { crossPlatformShadow } from '../../utils/shadow';
 
+import { contentColumn } from '@/theme';
+
 export default function ProfileScreen() {
   const { t } = useLanguage();
   const { user, isLoggedIn, logout, updateProfile } = useAuth();
@@ -846,9 +848,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 16,
-  },
+  contentContainer: { ...contentColumn, padding: 16 },
   avatarSection: {
     alignItems: 'center',
     marginBottom: 20,

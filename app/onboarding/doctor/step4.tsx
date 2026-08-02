@@ -1,27 +1,41 @@
 /**
  * Doctor Onboarding Step 4 — Review & Submit
  */
+import { useRouter } from 'expo-router';
+import {
+  ChevronLeft,
+  User,
+  GraduationCap,
+  Stethoscope,
+  Building2,
+  Clock,
+  CheckCircle,
+} from 'lucide-react-native';
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import {
-  ChevronLeft, User, GraduationCap, Stethoscope, Building2, Clock, CheckCircle,
-} from 'lucide-react-native';
-import { Colors } from '../../../constants/Colors';
-import { getSpecializationLabel } from '../../../constants/Specializations';
-import { crossPlatformShadow } from '../../../utils/shadow';
-import { useDoctorOnboardingStore } from '../../../store/doctorOnboardingStore';
-import onboardingService from '../../../services/onboardingService';
-import StepProgressBar from '../../../components/onboarding/StepProgressBar';
+
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
+import StepProgressBar from '../../../components/onboarding/StepProgressBar';
+import { Colors } from '../../../constants/Colors';
+import { getSpecializationLabel } from '../../../constants/Specializations';
+import onboardingService from '../../../services/onboardingService';
+import { useDoctorOnboardingStore } from '../../../store/doctorOnboardingStore';
+import { crossPlatformShadow } from '../../../utils/shadow';
+
+import { formColumn } from '@/theme';
 
 const STEP_LABELS = ['Profile', 'Details', 'Hospitals', 'Review'];
 const GENDER_LABELS: Record<string, string> = { MALE: 'Male', FEMALE: 'Female', OTHER: 'Other' };
 const DAY_LABELS: Record<string, string> = {
-  MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday',
-  FRI: 'Friday', SAT: 'Saturday', SUN: 'Sunday',
+  MON: 'Monday',
+  TUE: 'Tuesday',
+  WED: 'Wednesday',
+  THU: 'Thursday',
+  FRI: 'Friday',
+  SAT: 'Saturday',
+  SUN: 'Sunday',
 };
 
 export default function DoctorStep4() {
@@ -81,11 +95,15 @@ export default function DoctorStep4() {
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Specialization</Text>
-            <Text style={styles.reviewValue}>{profile.specialization ? getSpecializationLabel(profile.specialization) : '—'}</Text>
+            <Text style={styles.reviewValue}>
+              {profile.specialization ? getSpecializationLabel(profile.specialization) : '—'}
+            </Text>
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Gender</Text>
-            <Text style={styles.reviewValue}>{GENDER_LABELS[profile.gender] || profile.gender || '—'}</Text>
+            <Text style={styles.reviewValue}>
+              {GENDER_LABELS[profile.gender] || profile.gender || '—'}
+            </Text>
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Consultation Fee</Text>
@@ -120,14 +138,16 @@ export default function DoctorStep4() {
             <GraduationCap size={18} color={Colors.primary} strokeWidth={2} />
             <Text style={styles.cardTitle}>Qualifications</Text>
           </View>
-          {details.qualifications.filter((q) => q.degree).map((q, i) => (
-            <View key={i} style={styles.qualItem}>
-              <CheckCircle size={14} color={Colors.trustGreen} strokeWidth={2.5} />
-              <Text style={styles.qualText}>
-                {q.degree} — {q.institution} {q.year ? `(${q.year})` : ''}
-              </Text>
-            </View>
-          ))}
+          {details.qualifications
+            .filter((q) => q.degree)
+            .map((q, i) => (
+              <View key={i} style={styles.qualItem}>
+                <CheckCircle size={14} color={Colors.trustGreen} strokeWidth={2.5} />
+                <Text style={styles.qualText}>
+                  {q.degree} — {q.institution} {q.year ? `(${q.year})` : ''}
+                </Text>
+              </View>
+            ))}
           {details.qualifications.filter((q) => q.degree).length === 0 && (
             <Text style={styles.emptyText}>No qualifications added</Text>
           )}
@@ -156,7 +176,10 @@ export default function DoctorStep4() {
               <Text style={[styles.subLabel, { marginTop: 10 }]}>Conditions</Text>
               <View style={styles.chipRow}>
                 {[...details.conditions, ...details.customConditions].map((c) => (
-                  <View key={c} style={[styles.miniChip, { backgroundColor: Colors.trustGreenLight }]}>
+                  <View
+                    key={c}
+                    style={[styles.miniChip, { backgroundColor: Colors.trustGreenLight }]}
+                  >
                     <Text style={[styles.miniChipText, { color: '#16A34A' }]}>{c}</Text>
                   </View>
                 ))}
@@ -206,8 +229,8 @@ export default function DoctorStep4() {
         />
 
         <Text style={styles.disclaimer}>
-          By submitting, you confirm that all the information provided is accurate.
-          Our team will review your profile within 24–48 hours.
+          By submitting, you confirm that all the information provided is accurate. Our team will
+          review your profile within 24–48 hours.
         </Text>
 
         <View style={{ height: 40 }} />
@@ -219,28 +242,46 @@ export default function DoctorStep4() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: Colors.white,
+    ...formColumn,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.white,
     ...crossPlatformShadow({ offsetY: 2, opacity: 0.08, radius: 8, elevation: 3 }),
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20 },
+  scrollContent: { ...formColumn, padding: 20 },
   reviewTitle: { fontSize: 20, fontWeight: '900', color: Colors.text, marginBottom: 4 },
   reviewSubtitle: { fontSize: 14, color: Colors.textSecondary, marginBottom: 20, lineHeight: 20 },
   reviewCard: { marginBottom: 14 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   cardTitle: { fontSize: 15, fontWeight: '800', color: Colors.text },
   reviewRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
   reviewLabel: { fontSize: 13, color: Colors.textSecondary },
-  reviewValue: { fontSize: 14, fontWeight: '600', color: Colors.text, maxWidth: '60%', textAlign: 'right' },
+  reviewValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   miniChip: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryLight,
   },
   miniChipText: { fontSize: 12, fontWeight: '600', color: Colors.primary },
   subLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 },
@@ -248,7 +289,9 @@ const styles = StyleSheet.create({
   qualText: { fontSize: 14, color: Colors.text, flex: 1 },
   emptyText: { fontSize: 13, color: Colors.textLight, fontStyle: 'italic' },
   hospitalReview: {
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
   hospitalReviewName: { fontSize: 14, fontWeight: '700', color: Colors.text },
   hospitalReviewAddr: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
@@ -258,8 +301,11 @@ const styles = StyleSheet.create({
   scheduleText: { fontSize: 12, color: Colors.textSecondary },
   submitBtn: { marginTop: 20 },
   disclaimer: {
-    fontSize: 12, color: Colors.textLight, textAlign: 'center',
-    marginTop: 12, lineHeight: 18, paddingHorizontal: 20,
+    fontSize: 12,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 18,
+    paddingHorizontal: 20,
   },
 });
-
